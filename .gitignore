@@ -1,0 +1,7 @@
+/Debug/
+*.cfg
+*.xml
+*.project
+/Release/
+.cproject
+/startup/
