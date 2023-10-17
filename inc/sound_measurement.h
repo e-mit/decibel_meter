@@ -63,7 +63,7 @@ void getSoundDataStruct(SoundData_t * data, bool getSPLdata, bool getMaxAmpData,
 void amplitude_DN_to_mPa(uint32_t ampDN, uint16_t * intAmp_mPa, uint8_t * frac2dpAmp_mPa);
 uint32_t amplitude_mPa_to_DN(uint16_t intAmp_mPa);
 
-#ifdef DEBUG_AND_TESTS
+#ifdef TESTS
 	#define NTIMES (4*2)
 	#define N_SPL_SAVE 250
 	extern volatile uint32_t nspl;

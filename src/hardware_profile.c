@@ -20,17 +20,6 @@ volatile uint32_t TIM17_rollover_count = 0;
 void GPIO_Init(void) {
 	GPIO_InitTypeDef GPIO_InitStruct = {0};
 
-	#ifndef HAL_UART_MODULE_ENABLED
-		// UART not used, so set its TX pin to the default unused state
-		USART4_TX_GPIO_CLK_ENABLE();
-		GPIO_InitStruct.Pin = USART4_TX_PIN;
-		GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-		GPIO_InitStruct.Pull = GPIO_NOPULL;
-		GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-		HAL_GPIO_Init(USART4_TX_PORT, &GPIO_InitStruct);
-		HAL_GPIO_WritePin(USART4_TX_PORT, USART4_TX_PIN, GPIO_PIN_RESET);
-	#endif
-
 	#ifdef NUCLEO_BOARD
 		// LED
 		ERROR_LED_GPIO_CLK_ENABLE();
@@ -64,7 +53,7 @@ void GPIO_Init(void) {
 }
 
 
-// call like Error_Handler(__func__, __LINE__, __FILE__);
+// call like errorHandler(__func__, __LINE__, __FILE__);
 void errorHandler(const char * func, uint32_t line, const char * file) {
 	#ifdef NUCLEO_BOARD
 		HAL_GPIO_WritePin(ERROR_LED_GPIO_Port, ERROR_LED_Pin, GPIO_PIN_SET);
@@ -153,7 +142,7 @@ bool SystemClock_Config(void) {
 		return false;
 	}
 
-	// Initialize the peripherals clocks
+	// Initialize the peripheral clocks
 	RCC_PeriphCLKInitTypeDef PeriphClkInit = {0};
 	PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_I2S1|RCC_PERIPHCLK_I2C1;
 	PeriphClkInit.I2s1ClockSelection = RCC_I2S1CLKSOURCE_SYSCLK; // use HSI directly; not PLL

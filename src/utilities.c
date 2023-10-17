@@ -22,37 +22,34 @@ void float2IntFrac1dp(float positiveValue, uint32_t *intpart, uint8_t *fracpart1
 }
 
 
-#ifdef DEBUG_AND_TESTS
 extern void printSerial(const char* format, ...);
-#endif
 
-void getStartupReason(void) {
-#ifdef DEBUG_AND_TESTS
-	printSerial("Reset flag(s):\n");
+const char * getStartupReason(void) {
+	const char * reason = "Unknown";
 	if (__HAL_RCC_GET_FLAG(RCC_FLAG_PWRRST) == 1) {
-		printSerial("	BOR or POR/PDR reset\n");
+		reason = "BOR or POR/PDR reset";
 	}
 	if (__HAL_RCC_GET_FLAG(RCC_FLAG_OBLRST) == 1) {
-		printSerial("	Option byte loader reset\n");
+		reason = "Option byte loader reset";
 	}
 	if (__HAL_RCC_GET_FLAG(RCC_FLAG_PINRST) == 1) {
-		printSerial("	NRST pin reset\n");
+		reason = "NRST pin reset";
 	}
 	if (__HAL_RCC_GET_FLAG(RCC_FLAG_SFTRST) == 1) {
-		printSerial("	Software reset\n");
+		reason = "Software reset";
 	}
 	if (__HAL_RCC_GET_FLAG(RCC_FLAG_IWDGRST) == 1) {
-		printSerial("	Independent Watchdog reset\n");
+		reason = "Independent Watchdog reset";
 	}
 	if (__HAL_RCC_GET_FLAG(RCC_FLAG_WWDGRST) == 1) {
-		printSerial("	Window watchdog reset\n");
+		reason = "Window watchdog reset";
 	}
 	if (__HAL_RCC_GET_FLAG(RCC_FLAG_LPWRRST) == 1) {
-		printSerial("	Low power reset\n");
+		reason = "Low power reset";
 	}
 	/* Clear source Reset Flag */
 	__HAL_RCC_CLEAR_RESET_FLAGS();
-#endif
+	return reason;
 }
 
 // works for delays up to 2^32 ms (50 days) and handles up to one rollover correctly

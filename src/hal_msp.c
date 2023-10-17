@@ -84,10 +84,6 @@ void HAL_I2S_MspDeInit(I2S_HandleTypeDef* hi2s)
   }
 }
 
-
-
-#ifdef HAL_UART_MODULE_ENABLED
-
 void HAL_UART_MspInit(UART_HandleTypeDef* huart) {
 	GPIO_InitTypeDef GPIO_InitStruct = {0};
 	__HAL_RCC_USART4_CLK_ENABLE();
@@ -116,8 +112,6 @@ void HAL_UART_MspDeInit(UART_HandleTypeDef* huart) {
 	HAL_GPIO_DeInit(USART4_RX_PORT,USART4_RX_PIN);
 	HAL_GPIO_DeInit(USART4_TX_PORT,USART4_TX_PIN);
 }
-
-#endif // HAL_UART_MODULE_ENABLED
 
 // NB: interrupt priorities of timers in this function get later overwritten by the
 // individual timer init functions.

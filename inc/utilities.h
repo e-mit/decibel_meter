@@ -13,7 +13,7 @@ typedef struct specdel_t {
 
 void float2IntFrac2dp(float positiveValue, uint32_t *intpart, uint8_t *fracpart2dp);
 void float2IntFrac1dp(float positiveValue, uint32_t *intpart, uint8_t *fracpart1dp);
-void getStartupReason(void);
+const char * getStartupReason(void);
 bool delayHasExpired(SpecifiedDelay_t * theDelay, uint32_t * timeLeft_ms);
 uint32_t getRemainingDelay_ms(SpecifiedDelay_t * theDelay);
 void clearSpecifiedDelay(SpecifiedDelay_t * theDelay);

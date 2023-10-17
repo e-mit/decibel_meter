@@ -1,15 +1,11 @@
 #ifndef PROJECT_CONFIG_H
 #define PROJECT_CONFIG_H
 
-// Modules required:
-#define HAL_I2S_MODULE_ENABLED
-#define HAL_UART_MODULE_ENABLED
-
 // Define this to run tests
-#define TESTS
+//#define TESTS
 
 // Define this to print debugging messages over UART
-#define DEBUG_PRINT
+//#define DEBUG_PRINT
 
 // Define to use the nucleo board LED and pushbutton
 #define NUCLEO_BOARD

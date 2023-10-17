@@ -81,24 +81,9 @@ bool micOn(bool bEnable) {
 }
 
 
-bool applyDefaultSettings(void) {
-	bool ok = micOn(true);
-	if (false) {
-		// ensure DMA is turned off: may have been turned on temporarily for SPL calc:
-		enable_I2S_DMA_interrupts(false);
-	}
-	// in all cases, want SPL disabled:
-	enableSPLcalculation(false);
-
-	clearAllData();
-	return ok;
-}
-
-
-
 // Each call attempts to execute one extra stage; the returned value is the
-// expected wait in ms until the next stage can execute -> can choose to wait for this long externally OR
-// can repeatedly call this function until it progresses.
+// expected wait in ms until the next stage can execute -> can choose to externally sleep/wait for this period
+// OR can repeatedly call this function until it progresses.
 // Normally have bRestart = true if this is the first cycle after entering cycle mode.
 uint32_t staged_IAQ_readout(void) {
 	static uint32_t stage = 0;
@@ -198,7 +183,7 @@ uint32_t staged_IAQ_readout(void) {
 
 
 	// reaching here is an error: reset the cycles:
-	PRINT("Cycle error: setting stage = 0.\n");
+	printSerial("Cycle error: setting stage = 0.\n");
 	stage = 0; // restart as if just entering cycle mode
 	return 0;
 }

@@ -5,8 +5,6 @@
 #include <stdlib.h>
 #include "project_config.h"
 #include "print_functions.h"
-
-#ifdef HAL_UART_MODULE_ENABLED
  
 extern void UARTprint(char * str, uint16_t len); // this must be supplied in project code as it relies on HAL etc
 // the above is supplied by UART.c/h
@@ -68,4 +66,3 @@ void printU64hex(uint64_t x) {
 	UARTprint(buf,strlen(buf));
 }
 
-#endif

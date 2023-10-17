@@ -1,10 +1,9 @@
 #ifndef STM32G0xx_HAL_CONF_H
 #define STM32G0xx_HAL_CONF_H
 
-#include "project_config.h" // selects optional peripheral modules
-
 #define HAL_MODULE_ENABLED
 #define HAL_I2S_MODULE_ENABLED
+#define HAL_UART_MODULE_ENABLED
 #define HAL_TIM_MODULE_ENABLED
 #define HAL_GPIO_MODULE_ENABLED
 #define HAL_EXTI_MODULE_ENABLED

@@ -63,7 +63,7 @@ static volatile uint32_t amplitudeSettlingPeriods = 0;
 // flag used to clear maxAmp_follower at appropriate moment of cycle
 static volatile bool clearMaxAmpFollowerFlag = false;
 
-#ifdef DEBUG_AND_TESTS
+#ifdef DEBUG_PRINT
 	static volatile float32_t SPL = 0.0;
 	static volatile float32_t bandSPL[SOUND_FREQ_BANDS] = {0.0};
 	volatile uint32_t timeA_us[NTIMES/2] = {0};
@@ -84,7 +84,7 @@ static inline void clearAmpFollowerInternal(void);
 static void decodeI2SdataLch(const uint16_t inBuf[], const uint32_t inBuflen, int32_t outBuf[]);
 static void findMinMax(int32_t * min, int32_t * max, const int32_t array[], const uint32_t length);
 static uint32_t getPo2factor(uint32_t bigVal, uint32_t smallVal);
-#ifdef DEBUG_AND_TESTS
+#ifdef DEBUG_PRINT
 	static uint32_t getFilteredMaxAmplitude(const int32_t data[], const uint32_t length);
 	static void calculateSPL(void);
 #endif
@@ -214,15 +214,16 @@ void getSoundDataStruct(SoundData_t * data, bool getSPLdata, bool getMaxAmpData,
 }
 
 void DMA1_Channel1_IRQHandler(void) {
-#ifdef DEBUG_AND_TESTS
-	HAL_GPIO_WritePin(TEST1_OUTPUT_GPIO_Port, TEST1_OUTPUT_Pin, GPIO_PIN_SET);
-#endif
+	#ifdef DEBUG_SIGNALS
+		HAL_GPIO_WritePin(TEST1_OUTPUT_GPIO_Port, TEST1_OUTPUT_Pin, GPIO_PIN_SET);
+	#endif
 	HAL_DMA_IRQHandler(&hdma_spi1_rx);
-#ifdef DEBUG_AND_TESTS
-	HAL_GPIO_WritePin(TEST1_OUTPUT_GPIO_Port, TEST1_OUTPUT_Pin, GPIO_PIN_RESET);
-#endif
+	#ifdef DEBUG_SIGNALS
+		HAL_GPIO_WritePin(TEST1_OUTPUT_GPIO_Port, TEST1_OUTPUT_Pin, GPIO_PIN_RESET);
+	#endif
 }
 
+// Setup for reading out the microphone: DMA, Timer, I2S
 bool sound_init(void) {
 	DMA_Init();
 	TIM3_Init();
@@ -256,8 +257,9 @@ static inline void clearAmpFollowerInternal(void) {
 	clearMaxAmpFollowerFlag = false;
 }
 
+// Prepare and start a one-shot timer that, on expiry, sets micStable = true and then turns itself off.
+// This is needed because the microphone output is inaccurate for a short period after power-on.
 static bool startWarmupPeriod(void) {
-	// prepare and start a one-shot timer that, on expiry, sets micStable = true and then turns itself off.
 	__HAL_TIM_SetCounter(&htim3,0);
 	if (HAL_TIM_Base_Start_IT(&htim3) != HAL_OK) {
 		return false;
@@ -306,20 +308,22 @@ static void TIM3_Init(void) {
 	#endif
 	HAL_NVIC_SetPriority(TIM3_IRQn, TMR3_IRQ_PRIORITY, 0);
 
-	// Note that initialising the time base causes the UIF flag to get set. Clear it.
+	// Note that initialising the time base causes the UIF flag to get set: clear it.
 	// NB: TIM_FLAG_UPDATE == TIM_SR_UIF. "Update" means rollover.
 	__HAL_TIM_CLEAR_FLAG(&htim3, TIM_SR_UIF);
 }
 
-// enable: starts the I2S clock and starts warmup timer (no DMA interrupt enabling)
-// disable: stops the DMA interrupts and stops I2S clock.
+// Enable: starts the I2S clock and starts the warmup timer (but no DMA interrupt enabling)
+// Disable: stops the DMA interrupts and stops I2S clock.
+// Return: bool(success)
 bool enableMic(bool bEnable) {
 	if (bEnable == micEnabled) {
 		return true;
 	}
 	if (bEnable) {
-		// start the I2S clock and start the warmup timer, but do not start the DMA interrupts (separate)
+		// Start the I2S clock and start the warmup timer, but do not start the DMA interrupts (separate)
 		startWarmupPeriod();
+		enableSPLcalculation(false);
 		// NB: use HALF_BUFLEN here because it is the number of I2S samples, not uint16s
 		if (HAL_I2S_Receive_DMA(&hi2s1, (uint16_t *) dmaBuffer, HALF_BUFLEN) != HAL_OK) {
 			return false;
@@ -421,19 +425,11 @@ void enableSPLcalculation(bool bEnable) {
 
 // DMA buffer is half full, i.e. "HALF_BUFLEN" uint16s are in first half of dmaBuffer
 void HAL_I2S_RxHalfCpltCallback(I2S_HandleTypeDef *hi2s) {
-#ifdef DEBUG_AND_TESTS
-	GET_TIME_TMR15(timeA_us[0]); // this times since the last ISR call
-	RESET_TMR15_AND_FLAG;
-#endif
 	// decode raw data and copy data out of DMA buffer -> could now start refilling the DMA buffer
 	decodeI2SdataLch((uint16_t *) dmaBuffer, HALF_BUFLEN, (int32_t *) dataBuffer);
 	if (clearMaxAmpFollowerFlag) {
 		clearAmpFollowerInternal();
 	}
-#ifdef DEBUG_AND_TESTS
-	GET_TIME_TMR15(timeA_us[1]);
-	RESET_TMR15_AND_FLAG;
-#endif
 	// Filter the amplitude, find the maximum, and update maxAmp_follower if necessary:
 	if (amplitudeSettlingPeriods == 0) {
 		// need to allow the IIR filter to settle. Reset the filter, run it, but do not yet
@@ -450,47 +446,35 @@ void HAL_I2S_RxHalfCpltCallback(I2S_HandleTypeDef *hi2s) {
 	else {
 		uint32_t maxAmp = getFilteredMaxAmplitudeQ31((int32_t *) dataBuffer, (uint32_t) EIGHTH_BUFLEN, false, true);
 	}
-#ifdef DEBUG_AND_TESTS
-	GET_TIME_TMR15(timeA_us[2]);
-	RESET_TMR15_AND_FLAG;
-#endif
 	if (SPL_calc_enabled) {
 		// calculate A-weighted SPL, octave bands SPL, update maxSPL_follower if necessary:
 		calculateSPLfast();
-		#ifdef DEBUG_AND_TESTS
+		#ifdef DEBUG_PRINT
 		if (nspl < N_SPL_SAVE) {
 			SPL_intBuf[nspl] = SPL_int;
 			nspl++;
 		}
 		#endif
 	}
-#ifdef DEBUG_AND_TESTS
-	GET_TIME_TMR15(timeA_us[3]);
-	RESET_TMR15_AND_FLAG;
-	if (autoStopI2S) {
-		NhalfBuffersCmpltd++;
-		if (NhalfBuffersCmpltd >= NhalfBufLimit) {
-			enableMic(false);
+	#ifdef DEBUG_PRINT
+		GET_TIME_TMR15(timeA_us[3]);
+		RESET_TMR15_AND_FLAG;
+		if (autoStopI2S) {
+			NhalfBuffersCmpltd++;
+			if (NhalfBuffersCmpltd >= NhalfBufLimit) {
+				enableMic(false);
+			}
 		}
-	}
-#endif
+	#endif
 	sound_DMA_semaphore = true;
 }
 
 void HAL_I2S_RxCpltCallback(I2S_HandleTypeDef *hi2s) {
-#ifdef DEBUG_AND_TESTS
-	GET_TIME_TMR15(timeB_us[0]); // this times since the last ISR call
-	RESET_TMR15_AND_FLAG;
-#endif
 	// decode raw data and copy data out of DMA buffer -> could now start refilling the DMA buffer
 	decodeI2SdataLch((uint16_t *) &(dmaBuffer[HALF_BUFLEN]), HALF_BUFLEN, (int32_t *) dataBuffer);
 	if (clearMaxAmpFollowerFlag) {
 		clearAmpFollowerInternal();
 	}
-#ifdef DEBUG_AND_TESTS
-	GET_TIME_TMR15(timeB_us[1]);
-	RESET_TMR15_AND_FLAG;
-#endif
 	// Filter the amplitude, find the maximum, and update maxAmp_follower if necessary:
 	if (amplitudeSettlingPeriods == 0) {
 		// need to allow the IIR filter to settle. Reset the filter, run it, but do not
@@ -507,41 +491,31 @@ void HAL_I2S_RxCpltCallback(I2S_HandleTypeDef *hi2s) {
 	else {
 		uint32_t maxAmp = getFilteredMaxAmplitudeQ31((int32_t *) dataBuffer, (uint32_t) EIGHTH_BUFLEN, false, true);
 	}
-#ifdef DEBUG_AND_TESTS
-	GET_TIME_TMR15(timeB_us[2]);
-	RESET_TMR15_AND_FLAG;
-#endif
 	if (SPL_calc_enabled) {
 		// calculate A-weighted SPL, octave bands SPL, update maxSPL_follower if necessary:
 		calculateSPLfast();
-		#ifdef DEBUG_AND_TESTS
+		#ifdef DEBUG_PRINT
 		if (nspl < N_SPL_SAVE) {
 			SPL_intBuf[nspl] = SPL_int;
 			nspl++;
 		}
 		#endif
 	}
-#ifdef DEBUG_AND_TESTS
-	GET_TIME_TMR15(timeB_us[3]);
-	RESET_TMR15_AND_FLAG;
-	if (autoStopI2S) {
-		NhalfBuffersCmpltd++;
-		if (NhalfBuffersCmpltd >= NhalfBufLimit) {
-			enableMic(false);
+	#ifdef DEBUG_PRINT
+		GET_TIME_TMR15(timeB_us[3]);
+		RESET_TMR15_AND_FLAG;
+		if (autoStopI2S) {
+			NhalfBuffersCmpltd++;
+			if (NhalfBuffersCmpltd >= NhalfBufLimit) {
+				enableMic(false);
+			}
 		}
-	}
-#endif
+	#endif
 	sound_DMA_semaphore = true;
 }
 
 void HAL_I2S_ErrorCallback(I2S_HandleTypeDef *hi2s) {
-#ifdef DEBUG_AND_TESTS
-	HAL_GPIO_WritePin(TEST2_OUTPUT_GPIO_Port, TEST2_OUTPUT_Pin, GPIO_PIN_SET);
-	printSerial("HAL_I2S_ErrorCallback() occurred.\n");
-	Error_Handler(__func__, __LINE__, __FILE__);
-#else
-	//maybe reset the I2S module here?
-#endif
+	errorHandler(__func__, __LINE__, __FILE__);
 }
 
 static void findMinMax(int32_t * min, int32_t * max, const int32_t array[], const uint32_t length) {
@@ -575,7 +549,7 @@ static uint32_t getPo2factor(uint32_t bigVal, uint32_t smallVal) {
 }
 
 
-#ifdef DEBUG_AND_TESTS
+#ifdef TESTS
 
 // dataBuffer must contain (at least) FFT_N values
 // dataBuffer is used for storage etc throughout this function. Since this is shared by both halves of
@@ -666,7 +640,7 @@ static void calculateSPL(void) {
 		count+=2;
 	}
 
-	#if defined(PRINT_TESTS) && defined(DEBUG_AND_TESTS)
+	#ifdef DEBUG_PRINT
 		printSerial("Input min = %i, max = %i, centre = %i, amplitude = %i, bitshift = %i\n\n\n",
 				     min, max, centre, amplitude, bitShift);
 		printSerial("Scaled FFT real input\n");
@@ -679,7 +653,7 @@ static void calculateSPL(void) {
 	// calc FFT
 	arm_cfft_q31(&S, FFTdata, 0, 1); // the output is internally divided by N (#points)
 
-	#if defined(PRINT_TESTS) && defined(DEBUG_AND_TESTS)
+	#ifdef DEBUG_PRINT
 		printSerial("Raw FFT output\n");
 		for (uint32_t i=0; i<(TEST_LENGTH_SAMPLES); i++) {
 			printSerial("%i\n", FFTdata[i]);
@@ -759,7 +733,7 @@ static void calculateSPL(void) {
 	// set the global volatile value:
 	SPL = SPLvalue;
 
-	#if defined(PRINT_TESTS) && defined(DEBUG_AND_TESTS)
+	#ifdef DEBUG_PRINT
 		printSerial("FFT output max = %i, amplitude2 = %i, bitshift2 = %i\n\n\n", max, amplitude2, bitShift2);
 
 		printSerial("Scaled FFT output:\n");
@@ -886,7 +860,7 @@ static void calculateSPLfast(void) {
 		count+=2;
 	}
 
-	#if defined(PRINT_TESTS) && defined(DEBUG_AND_TESTS)
+	#ifdef DEBUG_PRINT
 		printSerial("Input min = %i, max = %i, centre = %i, amplitude = %i, bitshift = %i\n\n\n",
 				     min, max, centre, amplitude, bitShift);
 		printSerial("Scaled FFT real input\n");
@@ -899,7 +873,7 @@ static void calculateSPLfast(void) {
 	// calc FFT
 	arm_cfft_q31(&S, FFTdata, 0, 1); // the output is internally divided by N (#points)
 
-	#if defined(PRINT_TESTS) && defined(DEBUG_AND_TESTS)
+	#ifdef DEBUG_PRINT
 		printSerial("Raw FFT output\n");
 		for (uint32_t i=0; i<(TEST_LENGTH_SAMPLES); i++) {
 			printSerial("%i\n", FFTdata[i]);
@@ -1016,7 +990,7 @@ static void calculateSPLfast(void) {
 	SPL_calc_complete = true;
 	#endif
 
-	#if defined(PRINT_TESTS) && defined(DEBUG_AND_TESTS)
+	#ifdef DEBUG_PRINT
 		printSerial("FFT output max = %i, amplitude2 = %i, bitshift2 = %i\n\n\n", max, amplitude2, bitShift2);
 
 		printSerial("Scaled FFT output:\n");
@@ -1063,7 +1037,7 @@ void reset_SPL_semaphore(void) {
 }
 
 
-#ifdef DEBUG_AND_TESTS
+#ifdef TESTS
 
 // apply a simple single-pole hi-pass IIR filter to the incoming data to remove the dc offset,
 // and return the largest +ve amplitude from this input array. Also update the global max amplitude
@@ -1210,7 +1184,7 @@ uint32_t amplitude_mPa_to_DN(uint16_t intAmp_mPa) {
 }
 
 
-#ifdef DEBUG_AND_TESTS
+#ifdef TESTS
 
 // to get an array (FFT_N values) of amplitude data after a specific number of half-buffers have elapsed:
 // 1) MUST disable SPL_calc because this overwrites the dataBuffer array

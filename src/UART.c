@@ -4,14 +4,12 @@
 #include "project_config.h"
 #include "UART.h"
 
-#ifdef HAL_UART_MODULE_ENABLED
-
 static UART_HandleTypeDef uart;
 
 ////////////////////////////////////////
 
 bool UART_Init(void) {
-		return USART4_UART_Init();
+	return USART4_UART_Init();
 }
 
 bool LPUART1_UART_Init(void) {
@@ -62,6 +60,4 @@ bool USART4_UART_Init(void) {
 void UARTprint(char * str, uint16_t len) {
 	HAL_UART_Transmit(&uart, (uint8_t*)str, len, 0xFFFF);
 }
-
-#endif
 
