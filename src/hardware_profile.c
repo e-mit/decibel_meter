@@ -65,12 +65,12 @@ void GPIO_Init(void) {
 
 
 // call like Error_Handler(__func__, __LINE__, __FILE__);
-void Error_Handler(const char * func, uint32_t line, const char * file) {
+void errorHandler(const char * func, uint32_t line, const char * file) {
 	#ifdef NUCLEO_BOARD
 		HAL_GPIO_WritePin(ERROR_LED_GPIO_Port, ERROR_LED_Pin, GPIO_PIN_SET);
 	#endif
 	#ifdef DEBUG_PRINT
-		printSerial("Error: %s at line %u, file: %s\n", func, line, file);
+		printSerial("Error in %s at line %u in file: %s\n", func, line, file);
 	#endif
 	while (true) {
 	}

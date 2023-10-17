@@ -28,17 +28,17 @@
 
 int main(void) {
 	if (HAL_Init() != HAL_OK) {
-		Error_Handler(__func__, __LINE__, __FILE__);
+		errorHandler(__func__, __LINE__, __FILE__);
 	}
 	if (!SystemClock_Config()) {
-		Error_Handler(__func__, __LINE__, __FILE__);
+		errorHandler(__func__, __LINE__, __FILE__);
 	}
 
 	GPIO_Init();
 
 #ifdef HAL_UART_MODULE_ENABLED
 	if (!UART_Init()) {
-		Error_Handler(__func__, __LINE__, __FILE__);
+		errorHandler(__func__, __LINE__, __FILE__);
 	}
 #endif
 

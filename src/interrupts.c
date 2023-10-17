@@ -10,19 +10,19 @@ volatile bool U6interruptSemaphore = false;
 volatile bool U7interruptSemaphore = false;
 
 void NMI_Handler(void) {
-	Error_Handler(__func__, __LINE__, __FILE__);
+	errorHandler(__func__, __LINE__, __FILE__);
 }
 
 void HardFault_Handler(void) {
-	Error_Handler(__func__, __LINE__, __FILE__);
+	errorHandler(__func__, __LINE__, __FILE__);
 }
 
 void SVC_Handler(void) {
-	Error_Handler(__func__, __LINE__, __FILE__);
+	errorHandler(__func__, __LINE__, __FILE__);
 }
 
 void PendSV_Handler(void) {
-	Error_Handler(__func__, __LINE__, __FILE__);
+	errorHandler(__func__, __LINE__, __FILE__);
 }
 
 uint64_t get_time_us(void) {
