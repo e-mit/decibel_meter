@@ -1,21 +1,23 @@
 #ifndef PROJECT_CONFIG_H
 #define PROJECT_CONFIG_H
 
-// modules required:
+// Modules required:
 #define HAL_I2S_MODULE_ENABLED
-#define HAL_CRC_MODULE_ENABLED
+#define HAL_UART_MODULE_ENABLED
 
-// define this to enable serial port printing BUT does not by itself cause any printing
-//#define HAL_UART_MODULE_ENABLED
-//HAL_USART_MODULE_ENABLED
+// Define this to run tests
+#define TESTS
 
-// define this to do 2 separate things: print various info over serial port AND enable some debugging functions
-// must have also defined HAL_UART_MODULE_ENABLED
-//#define DEBUG_AND_TESTS  // increases project size by approx 15kB.
+// Define this to print debugging messages over UART
+#define DEBUG_PRINT
+
+// Define to use the nucleo board LED and pushbutton
+#define NUCLEO_BOARD
+// Use interrupt rather than poll?
+#define ENABLE_BLUE_BUTTON_INT
 
 // clock setup
 #define SYSCLK_FREQ_HZ 32000000
-
 
 #define ENABLE_SLEEP_WAITING // sleep at end of main loop, otherwise do busy wait
 

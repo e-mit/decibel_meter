@@ -8,6 +8,9 @@
 #include <stdint.h>
 #include "utilities.h"
 
+extern volatile SoundData_t soundData;
+extern volatile SoundData_t soundData_internal;
+
 void printAllData(void);
 
 bool applyDefaultSettings(void);

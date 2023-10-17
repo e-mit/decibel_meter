@@ -14,7 +14,6 @@
 #include "arm_const_structs.h"
 #include "sound_measurement.h"
 #include "math.h"
-#include "commands.h"
 #include "sensor_constants.h"
 #include "UART.h"
 #include "utilities.h"
@@ -29,17 +28,17 @@
 
 int main(void) {
 	if (HAL_Init() != HAL_OK) {
-		Error_Handler();
+		Error_Handler(__func__, __LINE__, __FILE__);
 	}
 	if (!SystemClock_Config()) {
-		Error_Handler();
+		Error_Handler(__func__, __LINE__, __FILE__);
 	}
 
 	GPIO_Init();
 
 #ifdef HAL_UART_MODULE_ENABLED
 	if (!UART_Init()) {
-		Error_Handler();
+		Error_Handler(__func__, __LINE__, __FILE__);
 	}
 #endif
 
@@ -47,6 +46,11 @@ int main(void) {
 #ifdef DEBUG_AND_TESTS
 	getStartupReason();
 #endif
+
+	while (true) {
+		PRINT("Hello.\n");
+		HAL_Delay(1000);
+	}
 
 	//////////////////////////////////////////////////////////
 

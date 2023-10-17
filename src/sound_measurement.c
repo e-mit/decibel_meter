@@ -288,16 +288,16 @@ static void TIM3_Init(void) {
 	htim3.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
 	htim3.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
 	if (HAL_TIM_Base_Init(&htim3) != HAL_OK) {
-		Error_Handler();
+		Error_Handler(__func__, __LINE__, __FILE__);
 	}
 	sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
 	if (HAL_TIM_ConfigClockSource(&htim3, &sClockSourceConfig) != HAL_OK) {
-		Error_Handler();
+		Error_Handler(__func__, __LINE__, __FILE__);
 	}
 	sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
 	sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
 	if (HAL_TIMEx_MasterConfigSynchronization(&htim3, &sMasterConfig) != HAL_OK) {
-		Error_Handler();
+		Error_Handler(__func__, __LINE__, __FILE__);
 	}
 
 	// set priority but do not enable yet - may not be used
@@ -538,7 +538,7 @@ void HAL_I2S_ErrorCallback(I2S_HandleTypeDef *hi2s) {
 #ifdef DEBUG_AND_TESTS
 	HAL_GPIO_WritePin(TEST2_OUTPUT_GPIO_Port, TEST2_OUTPUT_Pin, GPIO_PIN_SET);
 	printSerial("HAL_I2S_ErrorCallback() occurred.\n");
-	Error_Handler();
+	Error_Handler(__func__, __LINE__, __FILE__);
 #else
 	//maybe reset the I2S module here?
 #endif

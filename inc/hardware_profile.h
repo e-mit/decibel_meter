@@ -6,18 +6,12 @@
 #include "project_config.h"
 #include <stdbool.h>
 
-// error codes:
-extern volatile uint32_t errorcode;
-#define HARD_FAULT 999
-
-///////////////////////////////////////////////////////////////////////
-
-// interrupt priorities:
-// priority must be number 0-3; , M0+ does not use subpriorities; IRQ number breaks tie
+// Interrupt priorities:
+// Priority must be number 0-3; , M0+ does not use subpriorities; IRQ number breaks tie
 // Equal priority interrupts do not interrupt each other. Lower priorities interrupt higher ones.
 // If two equal-priority interrupts are pending, the IRQn breaks the tie.
 
-// systick is priority 0 with IRQn = -1
+// NB: Systick is priority 0 with IRQn = -1
 #define DMA_IRQ_PRIORITY 2       // IRQn = 9
 
 // timers for debug process timing only:
@@ -25,14 +19,10 @@ extern volatile uint32_t errorcode;
 #define TMR16_IRQ_PRIORITY 2 // IRQn = 21
 #define TMR17_IRQ_PRIORITY 2 // IRQn = 22
 
-#define BLUE_BUTTON_IRQ_PRIORITY 3 // has IRQn = 7  --- NOT USED
-
 #define TMR14_IRQ_PRIORITY 3   // used for PPD42. IRQn = 19
 #define TMR3_IRQ_PRIORITY 3    // used for microphone warmup time. IRQn = 16
 
 ///////////////////////////////////////////////////////////////////////
-
-// defines
 
 #define AHB_CLK_DIV RCC_SYSCLK_DIV1
 #define APB1_CLK_DIV RCC_HCLK_DIV1
@@ -43,17 +33,6 @@ extern volatile uint32_t errorcode;
 
 // UART:
 
-#define USE_USART4 // choose module to use here, assuming HAL_UART_MODULE_ENABLED is defined
-
-// options for specific UART modules:
-#define LPUART1_TX_PIN GPIO_PIN_2 // these pins were those used by the STM32G071 nucleo board before snapping it.
-#define LPUART1_TX_PORT GPIOA
-#define LPUART1_TX_GPIO_CLK_ENABLE() __HAL_RCC_GPIOA_CLK_ENABLE() // must agree with LPUART1_TX_PORT
-
-#define LPUART1_RX_PIN GPIO_PIN_3
-#define LPUART1_RX_PORT GPIOA
-#define LPUART1_RX_GPIO_CLK_ENABLE() __HAL_RCC_GPIOA_CLK_ENABLE()
-
 #define USART4_TX_PIN GPIO_PIN_0
 #define USART4_TX_PORT GPIOA
 #define USART4_TX_GPIO_CLK_ENABLE() __HAL_RCC_GPIOA_CLK_ENABLE() // must agree with USART4_TX_PORT
@@ -62,7 +41,6 @@ extern volatile uint32_t errorcode;
 #define USART4_RX_PORT GPIOA
 #define USART4_RX_GPIO_CLK_ENABLE() __HAL_RCC_GPIOA_CLK_ENABLE()
 
-// generic options:
 #define UART_BAUD 115200
 #define UART_WORDLENGTH UART_WORDLENGTH_8B
 #define UART_STOPBITS UART_STOPBITS_1
@@ -70,33 +48,19 @@ extern volatile uint32_t errorcode;
 
 //////////////////////////////////////////////////////////////////////////////////
 
-#ifdef DEBUG_AND_TESTS
+#ifdef NUCLEO_BOARD
+	// The built-in green LED
 	#define ERROR_LED_GPIO_CLK_ENABLE() __HAL_RCC_GPIOA_CLK_ENABLE()
-	#define ERROR_LED_Pin GPIO_PIN_6
+	#define ERROR_LED_Pin GPIO_PIN_5
 	#define ERROR_LED_GPIO_Port GPIOA
 
-	/*
-	// if using the nucleo board with built-in blue button:
+	// The built-in blue button:
 	#define BLUE_BUTTON_GPIO_CLK_ENABLE() __HAL_RCC_GPIOC_CLK_ENABLE()
 	#define BLUE_BUTTON_PULL GPIO_NOPULL
 	#define BLUE_BUTTON_Pin GPIO_PIN_13
 	#define BLUE_BUTTON_GPIO_Port GPIOC
 	#define BLUE_BUTTON_IRQn EXTI4_15_IRQn
-	*/
-	// if using the prototype MS1 board (no PC13 GPIO so use PA7)
-	#define BLUE_BUTTON_GPIO_CLK_ENABLE() __HAL_RCC_GPIOA_CLK_ENABLE()
-	#define BLUE_BUTTON_PULL GPIO_PULLUP
-	#define BLUE_BUTTON_Pin GPIO_PIN_7
-	#define BLUE_BUTTON_GPIO_Port GPIOA
-	#define BLUE_BUTTON_IRQn EXTI4_15_IRQn
-
-	#define TEST1_OUTPUT_GPIO_CLK_ENABLE() __HAL_RCC_GPIOA_CLK_ENABLE()
-	#define TEST1_OUTPUT_Pin GPIO_PIN_8
-	#define TEST1_OUTPUT_GPIO_Port GPIOA
-
-	#define TEST2_OUTPUT_GPIO_CLK_ENABLE() __HAL_RCC_GPIOB_CLK_ENABLE()
-	#define TEST2_OUTPUT_Pin GPIO_PIN_2
-	#define TEST2_OUTPUT_GPIO_Port GPIOB
+	#define BLUE_BUTTON_IRQ_PRIORITY 3 // has IRQn = 7
 #endif
 
 ///////////////////////////////////////////////////////////////////////
@@ -105,14 +69,14 @@ extern DMA_HandleTypeDef hdma_spi1_rx;
 
 // I2S1 pins
 
-// enable an internal pulldown on the SD line so it does not float when the right audio channel is enabled
+// Enable an internal pulldown on the SD line so it does not float when the right audio channel is enabled
 // this removes the need for an external pulldown.
-#define I2S1_SD_INTERNAL_PD // if not defined, pin has no PU or PD (the default setting from cubeMX)
+#define I2S1_SD_INTERNAL_PD
 
 #define I2S1_CLK_PIN GPIO_PIN_5
 #define I2S1_CLK_PORT GPIOA
 #define I2S1_CLK_GPIO_CLK_ENABLE() __HAL_RCC_GPIOA_CLK_ENABLE() // must agree with I2S1_CLK_PORT
-#define I2S1_CLK_AF_MAP GPIO_AF0_SPI1 // need to find this with cubeMX
+#define I2S1_CLK_AF_MAP GPIO_AF0_SPI1
 
 #define I2S1_WS_PIN GPIO_PIN_4
 #define I2S1_WS_PORT GPIOA
@@ -191,7 +155,7 @@ extern volatile uint32_t TIM17_rollover_count;
 // functions
 
 void GPIO_Init(void);
-void Error_Handler(void);
+void Error_Handler(const char * func, uint32_t line, const char * file);
 bool SystemClock_Config(void);
 bool TIM15_Init(void);
 bool TIM15_Init_With_Period_Count(uint32_t period_count);

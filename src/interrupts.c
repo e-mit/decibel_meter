@@ -2,7 +2,7 @@
 #include "interrupts.h"
 #include "hardware_profile.h"
 
-// the most significant 32bit value will never overflow
+// The most significant 32bit value will never overflow
 static volatile uint32_t time_ms_MS = 0, time_ms_LS = 0;
 
 volatile bool blueButtonPressed = false;
@@ -10,35 +10,19 @@ volatile bool U6interruptSemaphore = false;
 volatile bool U7interruptSemaphore = false;
 
 void NMI_Handler(void) {
-#ifdef DEBUG_AND_TESTS
-	HAL_GPIO_WritePin(TEST2_OUTPUT_GPIO_Port, TEST2_OUTPUT_Pin, GPIO_PIN_SET);
-#endif
-	while (true) {
-	}
+	Error_Handler(__func__, __LINE__, __FILE__);
 }
 
 void HardFault_Handler(void) {
-#ifdef DEBUG_AND_TESTS
-	HAL_GPIO_WritePin(TEST2_OUTPUT_GPIO_Port, TEST2_OUTPUT_Pin, GPIO_PIN_SET);
-#endif
-	errorcode = HARD_FAULT;
-	Error_Handler();
+	Error_Handler(__func__, __LINE__, __FILE__);
 }
 
 void SVC_Handler(void) {
-#ifdef DEBUG_AND_TESTS
-	HAL_GPIO_WritePin(TEST2_OUTPUT_GPIO_Port, TEST2_OUTPUT_Pin, GPIO_PIN_SET);
-#endif
-	while (true){
-	}
+	Error_Handler(__func__, __LINE__, __FILE__);
 }
 
 void PendSV_Handler(void) {
-#ifdef DEBUG_AND_TESTS
-	HAL_GPIO_WritePin(TEST2_OUTPUT_GPIO_Port, TEST2_OUTPUT_Pin, GPIO_PIN_SET);
-#endif
-	while (true){
-	}
+	Error_Handler(__func__, __LINE__, __FILE__);
 }
 
 uint64_t get_time_us(void) {
@@ -115,35 +99,15 @@ bool debounceInterrupt(uint32_t Ndebounce, GPIO_TypeDef *GPIOx, uint16_t GPIO_Pi
 	return true;
 }
 
-// This function handles EXTI line 4 to 15 interrupts.
-// ie. GPIO interrupts on any pin names Px4 to Px15. Can not have e.g. PB5 and PC5 interrupts as they share the same line.
-void EXTI4_15_IRQHandler(void) {
-
-#ifdef DEBUG_AND_TESTS
-	if (__HAL_GPIO_EXTI_GET_IT(BLUE_BUTTON_Pin)) { // must define ENABLE_BLUE_BUTTON_INT for this to work.
-		blueButtonPressed = true;
-		__HAL_GPIO_EXTI_CLEAR_IT(BLUE_BUTTON_Pin); // clear rising and falling
-	}
-#endif
-	__HAL_GPIO_EXTI_CLEAR_IT(GPIO_PIN_4 | GPIO_PIN_5 | GPIO_PIN_6 |GPIO_PIN_7 |GPIO_PIN_8 |
-				GPIO_PIN_9 | GPIO_PIN_10 | GPIO_PIN_11 | GPIO_PIN_12 | GPIO_PIN_13 | GPIO_PIN_14 | GPIO_PIN_15);
-}
-
-// line 0/1 interrupt handler - for reset interrupt signal
-void EXTI0_1_IRQHandler(void) {
-	// check which pin is interrupting:
-#ifdef ENABLE_RESET_INTERRUPT_LINE
-	if (__HAL_GPIO_EXTI_GET_FALLING_IT(RESET_INT_Pin)) {
-		__HAL_GPIO_EXTI_CLEAR_IT(RESET_INT_Pin); // clear rising and falling
-		// found that >= 3 consecutive reads rejects mains switching noise. Thus use ~5 reads.
-		if (debounceInterrupt(RESET_INTERRUPT_DEBOUNCE_POLLS, RESET_INT_GPIO_Port,
-							RESET_INT_Pin, GPIO_PIN_RESET)) {
-			// do anything here that needs doing before reset.
-			deassertDataValid();
-			NVIC_SystemReset();
+#if defined ENABLE_BLUE_BUTTON_INT && defined NUCLEO_BOARD
+	// This function handles EXTI line 4 to 15 interrupts.
+	// ie. GPIO interrupts on any pin names Px4 to Px15. Can not have e.g. PB5 and PC5 interrupts as they share the same line.
+	void EXTI4_15_IRQHandler(void) {
+		if (__HAL_GPIO_EXTI_GET_IT(BLUE_BUTTON_Pin)) { // must define ENABLE_BLUE_BUTTON_INT for this to work.
+			blueButtonPressed = true;
+			__HAL_GPIO_EXTI_CLEAR_IT(BLUE_BUTTON_Pin); // clear rising and falling
 		}
+		__HAL_GPIO_EXTI_CLEAR_IT(GPIO_PIN_4 | GPIO_PIN_5 | GPIO_PIN_6 |GPIO_PIN_7 |GPIO_PIN_8 |
+					GPIO_PIN_9 | GPIO_PIN_10 | GPIO_PIN_11 | GPIO_PIN_12 | GPIO_PIN_13 | GPIO_PIN_14 | GPIO_PIN_15);
 	}
 #endif
-	__HAL_GPIO_EXTI_CLEAR_IT(GPIO_PIN_0 | GPIO_PIN_1);
-}
-

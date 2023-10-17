@@ -15,38 +15,13 @@ volatile bool TIM16_flag = false;
 volatile bool TIM17_flag = false;
 volatile uint32_t TIM17_rollover_count = 0;
 
-volatile uint32_t errorcode = 0;
-
 ////////////////////////////////////////
 
 void GPIO_Init(void) {
 	GPIO_InitTypeDef GPIO_InitStruct = {0};
 
 	#ifndef HAL_UART_MODULE_ENABLED
-		// UART not used, so set its pins to the default unused state
-	#if defined USE_LPUART1
-
-		// TX pin:
-		LPUART1_TX_GPIO_CLK_ENABLE();
-		GPIO_InitStruct.Pin = LPUART1_TX_PIN;
-		GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-		GPIO_InitStruct.Pull = GPIO_NOPULL;
-		GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-		HAL_GPIO_Init(LPUART1_TX_PORT, &GPIO_InitStruct);
-		HAL_GPIO_WritePin(LPUART1_TX_PORT, LPUART1_TX_PIN, GPIO_PIN_RESET);
-
-		// RX pin:
-		LPUART1_RX_GPIO_CLK_ENABLE();
-		GPIO_InitStruct.Pin = LPUART1_RX_PIN;
-		GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-		GPIO_InitStruct.Pull = GPIO_NOPULL;
-		GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-		HAL_GPIO_Init(LPUART1_RX_PORT, &GPIO_InitStruct);
-		HAL_GPIO_WritePin(LPUART1_RX_PORT, LPUART1_RX_PIN, GPIO_PIN_RESET);
-
-	#elif defined USE_USART4
-
-		// TX pin:
+		// UART not used, so set its TX pin to the default unused state
 		USART4_TX_GPIO_CLK_ENABLE();
 		GPIO_InitStruct.Pin = USART4_TX_PIN;
 		GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
@@ -54,170 +29,50 @@ void GPIO_Init(void) {
 		GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
 		HAL_GPIO_Init(USART4_TX_PORT, &GPIO_InitStruct);
 		HAL_GPIO_WritePin(USART4_TX_PORT, USART4_TX_PIN, GPIO_PIN_RESET);
+	#endif
 
-		// RX pin:
-		USART4_RX_GPIO_CLK_ENABLE();
-		GPIO_InitStruct.Pin = USART4_RX_PIN;
+	#ifdef NUCLEO_BOARD
+		// LED
+		ERROR_LED_GPIO_CLK_ENABLE();
+		HAL_GPIO_WritePin(ERROR_LED_GPIO_Port, ERROR_LED_Pin, GPIO_PIN_RESET);
+		GPIO_InitStruct.Pin = ERROR_LED_Pin;
 		GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
 		GPIO_InitStruct.Pull = GPIO_NOPULL;
 		GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-		HAL_GPIO_Init(USART4_RX_PORT, &GPIO_InitStruct);
-		HAL_GPIO_WritePin(USART4_RX_PORT, USART4_RX_PIN, GPIO_PIN_RESET);
+		HAL_GPIO_Init(ERROR_LED_GPIO_Port, &GPIO_InitStruct);
 
-	#else
-		#error("Unrecognised UART module selection")
+		// Blue button
+		BLUE_BUTTON_GPIO_CLK_ENABLE();
+		#ifndef ENABLE_BLUE_BUTTON_INT
+			GPIO_InitStruct.Pin = BLUE_BUTTON_Pin;
+			GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+			GPIO_InitStruct.Pull = BLUE_BUTTON_PULL;
+			GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+			HAL_GPIO_Init(BLUE_BUTTON_GPIO_Port, &GPIO_InitStruct);
+		#else
+			#if ((BLUE_BUTTON_IRQ_PRIORITY > 3)||(BLUE_BUTTON_IRQ_PRIORITY<0))
+				#error("Interrupt priority must be 0-3")
+			#endif
+			GPIO_InitStruct.Pin = BLUE_BUTTON_Pin;
+			GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
+			GPIO_InitStruct.Pull = BLUE_BUTTON_PULL;
+			HAL_GPIO_Init(BLUE_BUTTON_GPIO_Port, &GPIO_InitStruct);
+			HAL_NVIC_SetPriority(BLUE_BUTTON_IRQn, BLUE_BUTTON_IRQ_PRIORITY, 0);
+			HAL_NVIC_EnableIRQ(BLUE_BUTTON_IRQn);
+		#endif
 	#endif
-	#endif
-
-	// set all other unused pins to the default state. These are:
-	// C14, C15, C6, A3, A6, A7, A8, A9, B2, B6
-	#ifdef DEBUG_AND_TESTS
-		#error("Unused pin settings assume that debug_and_tests is disabled.")
-	#endif
-	__HAL_RCC_GPIOA_CLK_ENABLE();
-	__HAL_RCC_GPIOB_CLK_ENABLE();
-	__HAL_RCC_GPIOC_CLK_ENABLE();
-	// C14:
-	GPIO_InitStruct.Pin = GPIO_PIN_14;
-	GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-	GPIO_InitStruct.Pull = GPIO_NOPULL;
-	GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-	HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
-	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_14, GPIO_PIN_RESET);
-	// C15:
-	GPIO_InitStruct.Pin = GPIO_PIN_15;
-	GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-	GPIO_InitStruct.Pull = GPIO_NOPULL;
-	GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-	HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
-	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_15, GPIO_PIN_RESET);
-	// C6:
-	GPIO_InitStruct.Pin = GPIO_PIN_6;
-	GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-	GPIO_InitStruct.Pull = GPIO_NOPULL;
-	GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-	HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
-	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_6, GPIO_PIN_RESET);
-	// A3:
-	GPIO_InitStruct.Pin = GPIO_PIN_3;
-	GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-	GPIO_InitStruct.Pull = GPIO_NOPULL;
-	GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-	HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
-	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_3, GPIO_PIN_RESET);
-	// A6:
-	GPIO_InitStruct.Pin = GPIO_PIN_6;
-	GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-	GPIO_InitStruct.Pull = GPIO_NOPULL;
-	GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-	HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
-	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_6, GPIO_PIN_RESET);
-	// A7:
-	GPIO_InitStruct.Pin = GPIO_PIN_7;
-	GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-	GPIO_InitStruct.Pull = GPIO_NOPULL;
-	GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-	HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
-	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_7, GPIO_PIN_RESET);
-	// A8:
-	GPIO_InitStruct.Pin = GPIO_PIN_8;
-	GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-	GPIO_InitStruct.Pull = GPIO_NOPULL;
-	GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-	HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
-	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_RESET);
-	// A9:
-	GPIO_InitStruct.Pin = GPIO_PIN_9;
-	GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-	GPIO_InitStruct.Pull = GPIO_NOPULL;
-	GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-	HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
-	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9, GPIO_PIN_RESET);
-	// B2:
-	GPIO_InitStruct.Pin = GPIO_PIN_2;
-	GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-	GPIO_InitStruct.Pull = GPIO_NOPULL;
-	GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-	HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
-	HAL_GPIO_WritePin(GPIOB, GPIO_PIN_2, GPIO_PIN_RESET);
-	// B6:
-	GPIO_InitStruct.Pin = GPIO_PIN_6;
-	GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-	GPIO_InitStruct.Pull = GPIO_NOPULL;
-	GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-	HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
-	HAL_GPIO_WritePin(GPIOB, GPIO_PIN_6, GPIO_PIN_RESET);
-	// B0:
-	GPIO_InitStruct.Pin = GPIO_PIN_0;
-	GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-	GPIO_InitStruct.Pull = GPIO_NOPULL;
-	GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-	HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
-	HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, GPIO_PIN_RESET);
-
-#ifdef DEBUG_AND_TESTS
-	// GPIO only used for testing and/or only present on nucleo board
-
-	// error LED
-	ERROR_LED_GPIO_CLK_ENABLE();
-	HAL_GPIO_WritePin(ERROR_LED_GPIO_Port, ERROR_LED_Pin, GPIO_PIN_RESET);
-	GPIO_InitStruct.Pin = ERROR_LED_Pin;
-	GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-	GPIO_InitStruct.Pull = GPIO_NOPULL;
-	GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-	HAL_GPIO_Init(ERROR_LED_GPIO_Port, &GPIO_InitStruct);
-
-	// blue button
-	BLUE_BUTTON_GPIO_CLK_ENABLE();
-#ifndef ENABLE_BLUE_BUTTON_INT
-	GPIO_InitStruct.Pin = BLUE_BUTTON_Pin;
-	GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-	GPIO_InitStruct.Pull = BLUE_BUTTON_PULL;
-	GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-	HAL_GPIO_Init(BLUE_BUTTON_GPIO_Port, &GPIO_InitStruct);
-#else
-	#if ((BLUE_BUTTON_IRQ_PRIORITY > 3)||(BLUE_BUTTON_IRQ_PRIORITY<0))
-		#error("Interrupt priority must be 0-3")
-	#endif
-	GPIO_InitStruct.Pin = BLUE_BUTTON_Pin;
-	GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
-	GPIO_InitStruct.Pull = BLUE_BUTTON_PULL;
-	HAL_GPIO_Init(BLUE_BUTTON_GPIO_Port, &GPIO_InitStruct);
-	HAL_NVIC_SetPriority(BLUE_BUTTON_IRQn, BLUE_BUTTON_IRQ_PRIORITY, 0);
-	HAL_NVIC_EnableIRQ(BLUE_BUTTON_IRQn);
-#endif
-
-	// test output 1
-	TEST1_OUTPUT_GPIO_CLK_ENABLE();
-	HAL_GPIO_WritePin(TEST1_OUTPUT_GPIO_Port, TEST1_OUTPUT_Pin, GPIO_PIN_RESET);
-	GPIO_InitStruct.Pin = TEST1_OUTPUT_Pin;
-	GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-	GPIO_InitStruct.Pull = GPIO_NOPULL;
-	GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-	HAL_GPIO_Init(TEST1_OUTPUT_GPIO_Port, &GPIO_InitStruct);
-
-	// test output 2
-	TEST2_OUTPUT_GPIO_CLK_ENABLE();
-	HAL_GPIO_WritePin(TEST2_OUTPUT_GPIO_Port, TEST2_OUTPUT_Pin, GPIO_PIN_RESET);
-	GPIO_InitStruct.Pin = TEST2_OUTPUT_Pin;
-	GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-	GPIO_InitStruct.Pull = GPIO_NOPULL;
-	GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-	HAL_GPIO_Init(TEST2_OUTPUT_GPIO_Port, &GPIO_InitStruct);
-
-#endif
-
 }
 
 
-void Error_Handler(void) {
-#ifdef DEBUG_AND_TESTS
-	printSerial("Error_Handler() called with errorCode = %u\n",errorcode);
-	errorcode = 0;
-	HAL_GPIO_WritePin(ERROR_LED_GPIO_Port, ERROR_LED_Pin, GPIO_PIN_SET);
-#endif
+// call like Error_Handler(__func__, __LINE__, __FILE__);
+void Error_Handler(const char * func, uint32_t line, const char * file) {
+	#ifdef NUCLEO_BOARD
+		HAL_GPIO_WritePin(ERROR_LED_GPIO_Port, ERROR_LED_Pin, GPIO_PIN_SET);
+	#endif
+	#ifdef DEBUG_PRINT
+		printSerial("Error: %s at line %u, file: %s\n", func, line, file);
+	#endif
 	while (true) {
-		;
 	}
 }
 
@@ -274,7 +129,6 @@ bool SystemClock_Config(void) {
 	if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK) {
 		return false;
 	}
-	////////////////////
 
 	// Initialize the CPU, AHB and APB bus clocks
 	RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
@@ -302,11 +156,7 @@ bool SystemClock_Config(void) {
 	// Initialize the peripherals clocks
 	RCC_PeriphCLKInitTypeDef PeriphClkInit = {0};
 	PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_I2S1|RCC_PERIPHCLK_I2C1;
-	// USART4 does not need any special clock commands (LPUART did)
-
-#ifdef HAL_I2S_MODULE_ENABLED
 	PeriphClkInit.I2s1ClockSelection = RCC_I2S1CLKSOURCE_SYSCLK; // use HSI directly; not PLL
-#endif
 	if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit) != HAL_OK) {
 		return false;
 	}
@@ -455,9 +305,9 @@ bool TIM17_Init_With_Period_Count(uint32_t period_count) {
 	return true;
 }
 
-// blocking read of a button with pullup
-// will only return once the button has been pressed and released
-// reads button at 1 ms intervals
+// Blocking read of a button with pullup.
+// Will only return once the button has been pressed and released.
+// Reads button at 1 ms intervals.
 void waitForDebouncedPressAndReleasePU(uint32_t debounce_count, GPIO_TypeDef *GPIOx, uint16_t GPIO_Pin) {
 	uint32_t pressCount = 0;
 	while (pressCount < debounce_count) {

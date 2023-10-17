@@ -8,7 +8,7 @@ void printSerial(const char* format, ...);
 void print64hex(int64_t n);
 void printU64hex(uint64_t x);
 
-#ifdef DEBUG_AND_TESTS
+#ifdef DEBUG_PRINT
 #define PRINT(x) printSerial(x) //NB: only works for single argument to printSerial
 #else
 #define PRINT(x)

@@ -11,13 +11,7 @@ static UART_HandleTypeDef uart;
 ////////////////////////////////////////
 
 bool UART_Init(void) {
-	#if defined USE_LPUART1
-		return LPUART1_UART_Init();
-	#elif defined USE_USART4
 		return USART4_UART_Init();
-	#else
-		#error("Unrecognised UART module selection")
-	#endif
 }
 
 bool LPUART1_UART_Init(void) {
