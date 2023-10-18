@@ -258,7 +258,8 @@ static inline void clearAmpFollowerInternal(void) {
 }
 
 // Prepare and start a one-shot timer that, on expiry, sets micStable = true and then turns itself off.
-// This is needed because the microphone output is inaccurate for a short period after power-on.
+// This is provided because the microphone output is inaccurate for a short period after power-on.
+// This is advisory only: all functions still operate as normal during this period.
 static bool startWarmupPeriod(void) {
 	__HAL_TIM_SetCounter(&htim3,0);
 	if (HAL_TIM_Base_Start_IT(&htim3) != HAL_OK) {
@@ -313,27 +314,32 @@ static void TIM3_Init(void) {
 	__HAL_TIM_CLEAR_FLAG(&htim3, TIM_SR_UIF);
 }
 
-// Enable: starts the I2S clock and starts the warmup timer (but no DMA interrupt enabling)
+// Enable: starts the I2S clock, warmup timer, DMA interrupts
 // Disable: stops the DMA interrupts and stops I2S clock.
 // Return: bool(success)
-bool enableMic(bool bEnable) {
+bool enableMicrophone(bool bEnable) {
 	if (bEnable == micEnabled) {
 		return true;
 	}
 	if (bEnable) {
-		// Start the I2S clock and start the warmup timer, but do not start the DMA interrupts (separate)
-		startWarmupPeriod();
-		enableSPLcalculation(false);
-		// NB: use HALF_BUFLEN here because it is the number of I2S samples, not uint16s
+		if (!startWarmupPeriod()) {
+			return false;
+		}
 		if (HAL_I2S_Receive_DMA(&hi2s1, (uint16_t *) dmaBuffer, HALF_BUFLEN) != HAL_OK) {
 			return false;
 		}
 		micEnabled = true;
 		micStable = false;
+		enableSPLcalculation(true);
+		amplitudeSettlingPeriods = 0;
+		clearAmpFollowerInternal();
+		__HAL_DMA_CLEAR_FLAG(&hdma_spi1_rx, DMA_ISR_TCIF1 | DMA_ISR_HTIF1 | DMA_ISR_TEIF1 | DMA_ISR_GIF1);
+		NVIC_EnableIRQ(DMA1_Channel1_IRQn);
+		DMAintEnabled = true;
 	}
 	else {
-		// stop I2S clock and stop DMA interrupts (if not already done)
-		enable_I2S_DMA_interrupts(false); // disable DMA interrupts
+		DMAintEnabled = false;
+		NVIC_DisableIRQ(DMA1_Channel1_IRQn);
 		enableSPLcalculation(false);
 		if (HAL_I2S_DMAStop(&hi2s1) != HAL_OK) {
 			return false;
@@ -373,39 +379,15 @@ void pause_DMA_interrupts(bool bPause) {
 	__ISB();
 }
 
-void enable_I2S_DMA_interrupts(bool bEnable) {
-	if (bEnable == DMAintEnabled) {
-		return;
-	}
-	if (bEnable) {
-		// enable the interrupts and also begin a new digital filter settling period
-		// for the amplitude measurement, during which the maxamp
-		// measurement (and thus ampl interrupt) are disabled (read ampl as 0). Also reset maxAmp value.
-		amplitudeSettlingPeriods = 0;
-		clearAmpFollowerInternal();
-		// first clear the interrupt flags:
-		__HAL_DMA_CLEAR_FLAG(&hdma_spi1_rx, DMA_ISR_TCIF1 | DMA_ISR_HTIF1 | DMA_ISR_TEIF1 | DMA_ISR_GIF1);
-		NVIC_EnableIRQ(DMA1_Channel1_IRQn);
-		DMAintEnabled = true;
-	}
-	else {
-		// just disable interrupts; no other clearing or state changes.
-		DMAintEnabled = false;
-		NVIC_DisableIRQ(DMA1_Channel1_IRQn);
-	}
-}
-
-// convert input raw I2S data into signed 32 bit numbers, assuming the I2S data is Left
+// Convert input raw I2S data into signed 32 bit numbers, assuming the I2S data is Left
 // channel only and the first datum starts at element 0.
 // inBuflen is simply the number of elements in inBuf
 static void decodeI2SdataLch(const uint16_t inBuf[], const uint32_t inBuflen, int32_t outBuf[]) {
 	uint32_t outCount = 0;
 	for (uint32_t i = 0; i < inBuflen; i+=4) {
 		// join MS16bits and LS16bits, then shift the result down 8 bits because it is a 24-bit
-		// value, rather than a 32-bit one. NOTE: it MUST be done like this to get the correct
-		// sign bit; cannot do it like the line below.
+		// value, rather than a 32-bit one.
 		outBuf[outCount] = ((int32_t) ((((uint32_t) inBuf[i]) << 16) | ((uint32_t) inBuf[i+1]))) >> 8;
-		//NO: outBuf[outCount] = (int32_t) ((((uint32_t) inBuf[i]) << 8) | (((uint32_t) inBuf[i+1]) >> 8));
 		outCount++;
 	}
 }
@@ -414,7 +396,6 @@ void clearMaxAmpFollower(void) {
 	clearMaxAmpFollowerFlag = true;
 }
 
-
 void enableSPLcalculation(bool bEnable) {
 	if (bEnable) {
 		reset_SPL_semaphore();
@@ -422,88 +403,38 @@ void enableSPLcalculation(bool bEnable) {
 	SPL_calc_enabled = bEnable;
 }
 
-
-// DMA buffer is half full, i.e. "HALF_BUFLEN" uint16s are in first half of dmaBuffer
+// Called when the first half of the DMA buffer is full, i.e. "HALF_BUFLEN" uint16s are in the first half of dmaBuffer
 void HAL_I2S_RxHalfCpltCallback(I2S_HandleTypeDef *hi2s) {
-	// decode raw data and copy data out of DMA buffer -> could now start refilling the DMA buffer
-	decodeI2SdataLch((uint16_t *) dmaBuffer, HALF_BUFLEN, (int32_t *) dataBuffer);
-	if (clearMaxAmpFollowerFlag) {
-		clearAmpFollowerInternal();
-	}
-	// Filter the amplitude, find the maximum, and update maxAmp_follower if necessary:
-	if (amplitudeSettlingPeriods == 0) {
-		// need to allow the IIR filter to settle. Reset the filter, run it, but do not yet
-		// use the maxAmp result to update the global follower OR to operate the interrupt
-		getFilteredMaxAmplitudeQ31((int32_t *) dataBuffer, (uint32_t) EIGHTH_BUFLEN, true, false);
-		amplitudeSettlingPeriods++;
-	}
-	else if (amplitudeSettlingPeriods < N_AMP_SETTLE_HALF_PERIODS) {
-		// need to allow the IIR filter to settle. Run the filter but do not
-		// use the maxAmp result to update the global follower OR to operate the interrupt
-		getFilteredMaxAmplitudeQ31((int32_t *) dataBuffer, (uint32_t) EIGHTH_BUFLEN, false, false);
-		amplitudeSettlingPeriods++;
-	}
-	else {
-		uint32_t maxAmp = getFilteredMaxAmplitudeQ31((int32_t *) dataBuffer, (uint32_t) EIGHTH_BUFLEN, false, true);
-	}
-	if (SPL_calc_enabled) {
-		// calculate A-weighted SPL, octave bands SPL, update maxSPL_follower if necessary:
-		calculateSPLfast();
-		#ifdef DEBUG_PRINT
-		if (nspl < N_SPL_SAVE) {
-			SPL_intBuf[nspl] = SPL_int;
-			nspl++;
-		}
-		#endif
-	}
-	#ifdef DEBUG_PRINT
-		GET_TIME_TMR15(timeA_us[3]);
-		RESET_TMR15_AND_FLAG;
-		if (autoStopI2S) {
-			NhalfBuffersCmpltd++;
-			if (NhalfBuffersCmpltd >= NhalfBufLimit) {
-				enableMic(false);
-			}
-		}
-	#endif
-	sound_DMA_semaphore = true;
+	processHalfDMAbuffer(0);
 }
 
+// Called when the second half of the DMA buffer is full, i.e. "HALF_BUFLEN" uint16s are in the second half of dmaBuffer
 void HAL_I2S_RxCpltCallback(I2S_HandleTypeDef *hi2s) {
-	// decode raw data and copy data out of DMA buffer -> could now start refilling the DMA buffer
-	decodeI2SdataLch((uint16_t *) &(dmaBuffer[HALF_BUFLEN]), HALF_BUFLEN, (int32_t *) dataBuffer);
+	processHalfDMAbuffer(HALF_BUFLEN);
+}
+
+void processHalfDMAbuffer(uint32_t halfBufferStart) {
+	// Decode the raw data and copy it out of the DMA buffer: could now start refilling the DMA buffer
+	decodeI2SdataLch((uint16_t *) &(dmaBuffer[halfBufferStart]), HALF_BUFLEN, (int32_t *) dataBuffer);
 	if (clearMaxAmpFollowerFlag) {
 		clearAmpFollowerInternal();
 	}
 	// Filter the amplitude, find the maximum, and update maxAmp_follower if necessary:
-	if (amplitudeSettlingPeriods == 0) {
-		// need to allow the IIR filter to settle. Reset the filter, run it, but do not
-		// use the maxAmp result to update the global follower OR to operate the interrupt
-		getFilteredMaxAmplitudeQ31((int32_t *) dataBuffer, (uint32_t) EIGHTH_BUFLEN, true, false);
-		amplitudeSettlingPeriods++;
-	}
-	else if (amplitudeSettlingPeriods < N_AMP_SETTLE_HALF_PERIODS) {
-		// need to allow the IIR filter to settle. Run the filter but do not
-		// use the maxAmp result to update the global follower OR to operate the interrupt
-		getFilteredMaxAmplitudeQ31((int32_t *) dataBuffer, (uint32_t) EIGHTH_BUFLEN, false, false);
+	if (amplitudeSettlingPeriods < N_AMP_SETTLE_HALF_PERIODS) {
+		// Need to allow the IIR filter to settle
+		getFilteredMaxAmplitudeQ31((int32_t *) dataBuffer, (uint32_t) EIGHTH_BUFLEN, amplitudeSettlingPeriods == 0, false);
 		amplitudeSettlingPeriods++;
 	}
 	else {
-		uint32_t maxAmp = getFilteredMaxAmplitudeQ31((int32_t *) dataBuffer, (uint32_t) EIGHTH_BUFLEN, false, true);
+		getFilteredMaxAmplitudeQ31((int32_t *) dataBuffer, (uint32_t) EIGHTH_BUFLEN, false, true);
 	}
-	if (SPL_calc_enabled) {
-		// calculate A-weighted SPL, octave bands SPL, update maxSPL_follower if necessary:
-		calculateSPLfast();
-		#ifdef DEBUG_PRINT
+	// Calculate the A-weighted SPL, octave bands SPL, and update maxSPL_follower
+	calculateSPLfast();
+	#ifdef DEBUG_PRINT
 		if (nspl < N_SPL_SAVE) {
 			SPL_intBuf[nspl] = SPL_int;
 			nspl++;
 		}
-		#endif
-	}
-	#ifdef DEBUG_PRINT
-		GET_TIME_TMR15(timeB_us[3]);
-		RESET_TMR15_AND_FLAG;
 		if (autoStopI2S) {
 			NhalfBuffersCmpltd++;
 			if (NhalfBuffersCmpltd >= NhalfBufLimit) {
@@ -531,8 +462,8 @@ static void findMinMax(int32_t * min, int32_t * max, const int32_t array[], cons
 	}
 }
 
-// find the largest positive integer bitshift m, such that: smallVal*(2^m) <= bigVal
-// there is no checking for erroneous inputs (e.g. bigVal < smallVal).
+// Find the largest positive integer bitshift m, such that: smallVal*(2^m) <= bigVal.
+// There is no checking for erroneous inputs (e.g. bigVal < smallVal).
 // This is the largest upward bitshift that can be applied to smallVal such
 // that it is still smaller than bigVal.
 static uint32_t getPo2factor(uint32_t bigVal, uint32_t smallVal) {
@@ -544,7 +475,7 @@ static uint32_t getPo2factor(uint32_t bigVal, uint32_t smallVal) {
 		bigVal = bigVal >> 1;
 		bitShift++;
 	}
-	bitShift-=1; // correct for going one shift too far
+	bitShift -= 1; // correct for going one shift too far
 	return bitShift;
 }
 
@@ -847,15 +778,14 @@ static void calculateSPLfast(void) {
 
 	// calc centre of signal range, and the largest bitshift needed to fill the available
 	// range without saturating
-	int32_t centre = (min/2) + (max/2); //prev used bitshift here -> no
-	uint32_t amplitude = (uint32_t) (max - centre + 4); // add 4 for safety margin
+	int32_t centre = (min/2) + (max/2);
+	uint32_t amplitude = (uint32_t) (max - centre + BIT_ROUNDING_MARGIN);
 	uint32_t bitShift = getPo2factor((uint32_t) INT32_MAX, amplitude);
 
-	// apply offset and bitshift and put data into input vector
-	// NOTE: bitshift could be done as Q31, and thus saturating, but this should be unnecessary.
+	// Apply offset and bitshift and put data into input vector
 	uint32_t count = 0;
-	for (uint32_t i = 0; i<FFT_N; i++) {
-		FFTdata[count] = (q31_t) ((dataBuffer[i] - centre) << bitShift); // uses a left-shift on a signed int: appears OK
+	for (uint32_t i = 0; i < FFT_N; i++) {
+		FFTdata[count] = (q31_t) ((dataBuffer[i] - centre) << bitShift);
 		FFTdata[count+1] = 0; // MUST do this because the zeros get overwritten later, then array is reused.
 		count+=2;
 	}
@@ -897,7 +827,7 @@ static void calculateSPLfast(void) {
 		max = min;
 	}
 
-	uint32_t amplitude2 = ((uint32_t) max) + 4; // add 4 for safety margin
+	uint32_t amplitude2 = ((uint32_t) max) + BIT_ROUNDING_MARGIN
 	uint32_t bitShift2 = getPo2factor((uint32_t) INT32_MAX, amplitude2);
 
 	/// apply the bitshift (not to dc bin, and to 1st half of data only), then get abs mag of each bin
@@ -1078,54 +1008,57 @@ static uint32_t getFilteredMaxAmplitude(const int32_t data[], const uint32_t len
 
 #endif
 
-// as for getFilteredMaxAmplitude() but use Q31 operations.
+// Apply a simple single-pole hi-pass IIR filter to the incoming data to remove the dc offset.
+// Also find the largest absolute amplitude in the incoming data buffer and return this value.
+// Optionally also update the global maximum amplitude value if the new maximum is larger.
+// Uses Q31 operations.
 static uint32_t getFilteredMaxAmplitudeQ31(const int32_t data[], const uint32_t length,
 										   bool reset, bool updateMaxAmpFollower) {
 	static q31_t filtered = 0;
 	static q31_t lastData = 0;
-	// Want a filter with cutoff of fc = 10Hz. The coeffs will depend on Fs according to:
+	// Want a filter with cutoff of fc = 10Hz. The coefficients depend on Fs according to:
 	// b = exp(-2.pi.(1/Fs).fc)
 	// a0 = (1+b)/2
 	// a1 = -a0
-	// then convert to Q31 by dividing by 2^-31 and then rounding
-#if (I2S_AUDIOFREQ == I2S_AUDIOFREQ_16K)
-	q31_t a0 = 2143174546, b = 2138865443;
-#elif (I2S_AUDIOFREQ == I2S_AUDIOFREQ_32K)
-	q31_t a0 = 2145326931, b = 2143170214;
-#elif (I2S_AUDIOFREQ == I2S_AUDIOFREQ_48K)
-	q31_t a0 = 2146135192, b = 2144786735;
-#else
-	#error "Undefined I2S AUDIO FREQ"
-#endif
+	// Then convert to Q31 by dividing by 2^-31 and then rounding.
+	#if (I2S_AUDIOFREQ == I2S_AUDIOFREQ_16K)
+		q31_t a0 = 2143174546, b = 2138865443;
+	#elif (I2S_AUDIOFREQ == I2S_AUDIOFREQ_32K)
+		q31_t a0 = 2145326931, b = 2143170214;
+	#elif (I2S_AUDIOFREQ == I2S_AUDIOFREQ_48K)
+		q31_t a0 = 2146135192, b = 2144786735;
+	#else
+		#error "Undefined I2S AUDIO FREQ"
+	#endif
 
 	if (reset) {
-		// reset the state of the digital filter; e.g. if the mic has been disabled then re-enabled.
+		// Reset the state of the digital filter; e.g. if the mic has been disabled then re-enabled.
 		filtered = 0;
 		lastData = 0;
 	}
-
 	q31_t maxAmp = 0;
 	q31_t minAmp = 0;
-	// apply a bitshift to the incoming data to maximise the dynamic range BUT while guaranteeing
+
+	// Apply a bitshift to the incoming data to maximise the dynamic range BUT while also guaranteeing
 	// the intermediate value cannot overflow (three Q31 values are added together).
 	const uint32_t bitShift = 5;
-	for (uint32_t i=0; i<length; i++) {
+	for (uint32_t i = 0; i < length; i++) {
 		q31_t fx = (q31_t) (data[i] << bitShift);
 
-		// to do D = A*B saturating:
-		// arm_mult_q31(&A,&B,&D,1);
-		// to do D = A+B saturating:
-		// arm_add_q31(&A,&B,&D,1);
+		// Arm saturating operations:
+		// D = A*B is: arm_mult_q31(&A, &B, &D, 1);
+		// D = A+B is: arm_add_q31(&A, &B, &D, 1);
 
-		// now do: filtered = (a0*fx) + (a1*lastData) + (b*filtered);
+		// Now do the filter calculation:
+		// filtered = (a0*fx) + (a1*lastData) + (b*filtered);
 		// BUT NOTE that since a1 = -a0 this becomes:
 		// filtered = (a0*(fx - lastData)) + (b*filtered)
 		q31_t r1, r2, r3;
 		lastData = -lastData;
-		arm_add_q31(&fx,&lastData,&r1,1); // r1 = fx - lastData
-		arm_mult_q31(&a0,&r1,&r2,1);      // r2 = a0*r1
-		arm_mult_q31(&b,&filtered,&r3,1); // r3 = b*filtered
-		arm_add_q31(&r2,&r3,&filtered,1); // filtered = r2 + r3
+		arm_add_q31(&fx, &lastData, &r1, 1); // r1 = fx - lastData
+		arm_mult_q31(&a0, &r1, &r2, 1);      // r2 = a0*r1
+		arm_mult_q31(&b, &filtered, &r3, 1); // r3 = b*filtered
+		arm_add_q31(&r2, &r3, &filtered, 1); // filtered = r2 + r3
 
 		lastData = fx;
 		if (filtered > maxAmp) {
@@ -1135,6 +1068,7 @@ static uint32_t getFilteredMaxAmplitudeQ31(const int32_t data[], const uint32_t 
 			minAmp = filtered;
 		}
 	}
+	// Find the maximum absolute amplitude from the signed values:
 	uint32_t mn = abs(minAmp);
 	uint32_t mp = (uint32_t) maxAmp;
 	uint32_t absMaxAmp = 0;
@@ -1144,7 +1078,9 @@ static uint32_t getFilteredMaxAmplitudeQ31(const int32_t data[], const uint32_t 
 	else {
 		absMaxAmp = mp;
 	}
-	uint32_t ma32 = (uint32_t) (absMaxAmp >> bitShift); // reverse the scaling bitshift
+
+	// Reverse the scaling bitshift
+	uint32_t ma32 = (uint32_t) (absMaxAmp >> bitShift);
 
 	if (updateMaxAmpFollower && (ma32 > maxAmp_follower)) {
 		maxAmp_follower = ma32;

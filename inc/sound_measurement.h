@@ -7,6 +7,8 @@
 #include "project_config.h"
 #include "sensor_constants.h"
 
+#define BIT_ROUNDING_MARGIN 4
+
 extern volatile bool sound_DMA_semaphore; // set true at end of every DMA ISR
 
 // this is set true by the sound module when a new SPL reading is ready. This may be after every DMA interrupt
@@ -53,11 +55,12 @@ __attribute__((always_inline)) inline bool micHasStabilized(void) {
 // User functions:
 
 bool sound_init(void);
-bool enableMic(bool bEnable);            // starts/stops I2S clock
+bool enableMicrophone(bool bEnable);
 void pause_DMA_interrupts(bool bPause);
-void enable_I2S_DMA_interrupts(bool bEnable); // starts DMA interrupts and maxAmp following
 void enableSPLcalculation(bool bEnable);
 void clearMaxAmpFollower(void); // on next cycle, will reset the max amp follower
+
+void processHalfDMAbuffer(uint32_t halfBufferStart);
 
 void getSoundDataStruct(SoundData_t * data, bool getSPLdata, bool getMaxAmpData, uint32_t * pMaxAmp_DN);
 void amplitude_DN_to_mPa(uint32_t ampDN, uint16_t * intAmp_mPa, uint8_t * frac2dpAmp_mPa);
