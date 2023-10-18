@@ -16,10 +16,7 @@
 
 // timers for debug process timing only:
 #define TMR15_IRQ_PRIORITY 2 // IRQn = 20
-#define TMR16_IRQ_PRIORITY 2 // IRQn = 21
-#define TMR17_IRQ_PRIORITY 2 // IRQn = 22
 
-#define TMR14_IRQ_PRIORITY 3   // used for PPD42. IRQn = 19
 #define TMR3_IRQ_PRIORITY 3    // used for microphone warmup time. IRQn = 16
 
 ///////////////////////////////////////////////////////////////////////
@@ -97,19 +94,7 @@ extern DMA_HandleTypeDef hdma_spi1_rx;
 #define TMR15_PRESCALER ((SYSCLK_FREQ_HZ/TMR15_FREQ_HZ)-1)
 #define TMR15_PERIOD_COUNT 65535
 
-// TMR16: 1ms tick; up to 65.5 sec
-#define TMR16_FREQ_HZ 1000
-#define TMR16_PRESCALER ((SYSCLK_FREQ_HZ/TMR16_FREQ_HZ)-1)
-#define TMR16_PERIOD_COUNT 65535
-
-// TMR17: 0.1ms tick; up to 6.55 sec
-#define TMR17_FREQ_HZ 10000
-#define TMR17_PRESCALER ((SYSCLK_FREQ_HZ/TMR17_FREQ_HZ)-1)
-#define TMR17_PERIOD_COUNT 65535
-
 extern TIM_HandleTypeDef htim15;
-extern TIM_HandleTypeDef htim16;
-extern TIM_HandleTypeDef htim17;
 
 // NB: use these timers like:
 // 1) call TIM15_Init()
@@ -121,9 +106,6 @@ extern TIM_HandleTypeDef htim17;
 //    or, do GET_TIME_TMR15(count) and count == UINT32_MAX if timer overflowed.
 
 extern volatile bool TIM15_flag;
-extern volatile bool TIM16_flag;
-extern volatile bool TIM17_flag;
-extern volatile uint32_t TIM17_rollover_count;
 
 // very small chance of a logic race in the following
 #define RESET_TMR15_AND_FLAG {TIM15_flag = false; __HAL_TIM_SetCounter(&htim15,0);}
@@ -132,21 +114,9 @@ extern volatile uint32_t TIM17_rollover_count;
 								  TIM15_flag = false; \
 								  __HAL_TIM_SetCounter(&htim15,0);\
 								  __HAL_TIM_ENABLE(&htim15);}
-#define RESET_TMR16_AND_FLAG {TIM16_flag = false; __HAL_TIM_SetCounter(&htim16,0);}
-#define RESET_TMR17_AND_FLAG {TIM17_flag = false; __HAL_TIM_SetCounter(&htim17,0);}
 
 #define GET_TIME_TMR15(x) {x = __HAL_TIM_GetCounter(&htim15);\
 						   if (TIM15_flag) { \
-							   x = UINT32_MAX; \
-						   }}
-
-#define GET_TIME_TMR16(x) {x = __HAL_TIM_GetCounter(&htim16);\
-						   if (TIM16_flag) { \
-							   x = UINT32_MAX; \
-						   }}
-
-#define GET_TIME_TMR17(x) {x = __HAL_TIM_GetCounter(&htim17);\
-						   if (TIM17_flag) { \
 							   x = UINT32_MAX; \
 						   }}
 
@@ -159,12 +129,6 @@ void errorHandler(const char * func, uint32_t line, const char * file);
 bool SystemClock_Config(void);
 bool TIM15_Init(void);
 bool TIM15_Init_With_Period_Count(uint32_t period_count);
-bool TIM16_Init(void);
-bool TIM16_Init_With_Period_Count(uint32_t period_count);
-bool TIM17_Init(void);
-bool TIM17_Init_With_Period_Count(uint32_t period_count);
 void waitForDebouncedPressAndReleasePU(uint32_t debounce_count, GPIO_TypeDef *GPIOx, uint16_t GPIO_Pin);
-uint32_t getTMR17rolloverCountAndReset(void);
-uint32_t getTMR17rolloverCount(void);
 
 #endif

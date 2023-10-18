@@ -124,14 +124,6 @@ void HAL_TIM_Base_MspInit(TIM_HandleTypeDef* htim_base)
 	  HAL_NVIC_SetPriority(TIM3_IRQn, 0, 0);
 	  HAL_NVIC_EnableIRQ(TIM3_IRQn);
 	}
-  else if(htim_base->Instance==TIM14)
-  {
-    /* Peripheral clock enable */
-    __HAL_RCC_TIM14_CLK_ENABLE();
-    /* TIM14 interrupt Init */
-    HAL_NVIC_SetPriority(TIM14_IRQn, 0, 0);
-    HAL_NVIC_EnableIRQ(TIM14_IRQn);
-  }
   else if(htim_base->Instance==TIM15)
   {
     /* Peripheral clock enable */
@@ -139,22 +131,6 @@ void HAL_TIM_Base_MspInit(TIM_HandleTypeDef* htim_base)
     /* TIM15 interrupt Init */
     HAL_NVIC_SetPriority(TIM15_IRQn, 0, 0);
     HAL_NVIC_EnableIRQ(TIM15_IRQn);
-  }
-  else if(htim_base->Instance==TIM16)
-  {
-    /* Peripheral clock enable */
-    __HAL_RCC_TIM16_CLK_ENABLE();
-    /* TIM16 interrupt Init */
-    HAL_NVIC_SetPriority(TIM16_IRQn, 0, 0);
-    HAL_NVIC_EnableIRQ(TIM16_IRQn);
-  }
-  else if(htim_base->Instance==TIM17)
-  {
-    /* Peripheral clock enable */
-    __HAL_RCC_TIM17_CLK_ENABLE();
-    /* TIM17 interrupt Init */
-    HAL_NVIC_SetPriority(TIM17_IRQn, 0, 0);
-    HAL_NVIC_EnableIRQ(TIM17_IRQn);
   }
 }
 
@@ -168,14 +144,6 @@ void HAL_TIM_Base_MspDeInit(TIM_HandleTypeDef* htim_base)
     /* TIM3 interrupt DeInit */
     HAL_NVIC_DisableIRQ(TIM3_IRQn);
   }
-  else if(htim_base->Instance==TIM14)
-  {
-    /* Peripheral clock disable */
-    __HAL_RCC_TIM14_CLK_DISABLE();
-
-    /* TIM14 interrupt DeInit */
-    HAL_NVIC_DisableIRQ(TIM14_IRQn);
-  }
   else if(htim_base->Instance==TIM15)
   {
     /* Peripheral clock disable */
@@ -183,22 +151,6 @@ void HAL_TIM_Base_MspDeInit(TIM_HandleTypeDef* htim_base)
 
     /* TIM15 interrupt DeInit */
     HAL_NVIC_DisableIRQ(TIM15_IRQn);
-  }
-  else if(htim_base->Instance==TIM16)
-  {
-    /* Peripheral clock disable */
-    __HAL_RCC_TIM16_CLK_DISABLE();
-
-    /* TIM16 interrupt DeInit */
-    HAL_NVIC_DisableIRQ(TIM16_IRQn);
-  }
-  else if(htim_base->Instance==TIM17)
-  {
-    /* Peripheral clock disable */
-    __HAL_RCC_TIM17_CLK_DISABLE();
-
-    /* TIM17 interrupt DeInit */
-    HAL_NVIC_DisableIRQ(TIM17_IRQn);
   }
 }
 

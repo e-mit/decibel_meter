@@ -78,17 +78,6 @@ void TIM15_IRQHandler(void) {
 	HAL_TIM_IRQHandler(&htim15);
 }
 
-void TIM16_IRQHandler(void) {
-	TIM16_flag = true;
-	HAL_TIM_IRQHandler(&htim16);
-}
-
-void TIM17_IRQHandler(void) {
-	TIM17_flag = true;
-	TIM17_rollover_count++;
-	HAL_TIM_IRQHandler(&htim17);
-}
-
 // returns true only if pin is asserted on all Ndebounce consecutive reads.
 bool debounceInterrupt(uint32_t Ndebounce, GPIO_TypeDef *GPIOx, uint16_t GPIO_Pin, GPIO_PinState PinStateAsserted) {
 	for (uint32_t i=0; i<Ndebounce; i++) {
