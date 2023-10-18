@@ -20,7 +20,6 @@
 #include "MS_functions.h"
 
 SoundData_t soundData = {0};
-uint32_t maxAmplitude = 0;
 
 int main(void) {
 	// Initialise the system
@@ -49,7 +48,7 @@ int main(void) {
 
 	while (true) {
 
-		getSoundDataStruct(&soundData, true, true, &maxAmplitude);
+		getSoundDataStruct(&soundData, true, true);
 		if (true) {
 			printAllData(&soundData);
 			clearMaxAmpFollower(); // move this into function

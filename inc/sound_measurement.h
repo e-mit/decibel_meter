@@ -62,8 +62,8 @@ void clearMaxAmpFollower(void); // on next cycle, will reset the max amp followe
 
 void processHalfDMAbuffer(uint32_t halfBufferStart);
 
-void getSoundDataStruct(SoundData_t * data, bool getSPLdata, bool getMaxAmpData, uint32_t * pMaxAmp_DN);
-void amplitude_DN_to_mPa(uint32_t ampDN, uint16_t * intAmp_mPa, uint8_t * frac2dpAmp_mPa);
+void getSoundDataStruct(SoundData_t * data, bool getSPLdata, bool getMaxAmpData);
+void amplitude_DN_to_mPa(const uint32_t ampDN, uint16_t * intAmp_mPa, uint8_t * frac2dpAmp_mPa);
 uint32_t amplitude_mPa_to_DN(uint16_t intAmp_mPa);
 
 #ifdef TESTS
