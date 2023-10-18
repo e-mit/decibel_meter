@@ -8,23 +8,6 @@
 #include <stdint.h>
 #include "utilities.h"
 
-extern volatile SoundData_t soundData;
-extern volatile SoundData_t soundData_internal;
-
-void printAllData(void);
-
-bool applyDefaultSettings(void);
-
-void enterCycleMode(void);
-
-void maxAmpFollowerOn(bool bEnable);
-bool micOn(bool bEnable);
-
-////////
-
-uint32_t staged_IAQ_readout(void);
-void clearAllData(void);
-void clearAllData_internal(void);
-
+void printAllData(SoundData_t * soundData);
 #endif
 

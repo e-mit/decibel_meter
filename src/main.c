@@ -19,6 +19,8 @@
 #include "utilities.h"
 #include "MS_functions.h"
 
+SoundData_t soundData = {0};
+uint32_t maxAmplitude = 0;
 
 int main(void) {
 	// Initialise the system
@@ -41,25 +43,19 @@ int main(void) {
 		errorHandler(__func__, __LINE__, __FILE__);
 	}
 
-	// Enable the microphone and allow it to stabilize
-	if (!enableMic(true)) {
+	if (!enableMicrophone(true)) {
 		errorHandler(__func__, __LINE__, __FILE__);
 	}
 
-	clearAllData();
 	while (true) {
-		// update stable status so it can be read at any time (not just after a data readout)
-		soundData.stable = micHasStabilized() ? 1 : 0;
 
-		uint32_t staged_IAQ_readout_wait = staged_IAQ_readout();
+		if (getSoundDataStruct(&soundData, true, true, &maxAmplitude)) {
+			printAllData(&soundData);
+			clearMaxAmpFollower(); // move this into function
+		}
 
-		#ifdef ENABLE_SLEEP_WAITING
-			// sleep indefinitely until an interrupt occurs (NB: systick will wake it)
-			// do not sleep if either of the staged readouts has just returned a request for zero wait
-			if (staged_IAQ_readout_wait != 0) {
-				HAL_PWR_EnterSLEEPMode(PWR_MAINREGULATOR_ON, PWR_SLEEPENTRY_WFI);
-			}
-		#endif
+		// Sleep until next interrupt
+		HAL_PWR_EnterSLEEPMode(PWR_MAINREGULATOR_ON, PWR_SLEEPENTRY_WFI);
 	}
 	return 0;
 }
