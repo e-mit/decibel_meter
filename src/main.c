@@ -49,7 +49,8 @@ int main(void) {
 
 	while (true) {
 
-		if (getSoundDataStruct(&soundData, true, true, &maxAmplitude)) {
+		getSoundDataStruct(&soundData, true, true, &maxAmplitude);
+		if (true) {
 			printAllData(&soundData);
 			clearMaxAmpFollower(); // move this into function
 		}

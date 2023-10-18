@@ -827,7 +827,7 @@ static void calculateSPLfast(void) {
 		max = min;
 	}
 
-	uint32_t amplitude2 = ((uint32_t) max) + BIT_ROUNDING_MARGIN
+	uint32_t amplitude2 = ((uint32_t) max) + BIT_ROUNDING_MARGIN;
 	uint32_t bitShift2 = getPo2factor((uint32_t) INT32_MAX, amplitude2);
 
 	/// apply the bitshift (not to dc bin, and to 1st half of data only), then get abs mag of each bin
