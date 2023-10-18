@@ -56,7 +56,6 @@ __attribute__((always_inline)) inline bool micHasStabilized(void) {
 
 bool sound_init(void);
 bool enableMicrophone(bool bEnable);
-void pause_DMA_interrupts(bool bPause);
 void enableSPLcalculation(bool bEnable);
 void clearMaxAmpFollower(void); // on next cycle, will reset the max amp follower
 

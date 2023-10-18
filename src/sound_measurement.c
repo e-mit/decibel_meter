@@ -16,10 +16,6 @@
 #include <stddef.h>
 #include "sensor_constants.h"
 
-// global state vars:
-// micEnabled is not declared static so it can be accessed via inline function BUT must
-// not be declared extern elsewhere, to maintain encapsulation.
-volatile bool sound_DMA_semaphore = false; // set true at end of every DMA ISR
 volatile bool SPL_calc_complete = true; // set true after every SPL calculation, which may be on every DMA ISR
 										// OR every N ISRs, depending on filter settings.
 
@@ -79,7 +75,7 @@ static volatile bool clearMaxAmpFollowerFlag = false;
 static void DMA_Init(void);
 static bool I2S1_Init(void);
 static bool startWarmupPeriod(void);
-static void TIM3_Init(void);
+static bool TIM3_Init(void);
 static inline void clearAmpFollowerInternal(void);
 static void decodeI2SdataLch(const uint16_t inBuf[], const uint32_t inBuflen, int32_t outBuf[]);
 static void findMinMax(int32_t * min, int32_t * max, const int32_t array[], const uint32_t length);
@@ -89,7 +85,7 @@ static uint32_t getPo2factor(uint32_t bigVal, uint32_t smallVal);
 	static void calculateSPL(void);
 #endif
 static void calculateSPLfast(void);
-static uint32_t getFilteredMaxAmplitudeQ31(const int32_t data[], const uint32_t length,
+static uint32_t getFilteredMaxAmplitudeQ31(const int32_t * data, const uint32_t length,
 										   bool reset, bool updateMaxAmpFollower);
 
 //////////////////////////////////////////////////////////////////////////////
@@ -211,13 +207,16 @@ void DMA1_Channel1_IRQHandler(void) {
 	#endif
 }
 
-// Setup for reading out the microphone: DMA, Timer, I2S
+// Setup for reading out the microphone: DMA, Timer, I2S.
+// Return bool success.
 bool sound_init(void) {
 	DMA_Init();
-	TIM3_Init();
-	return I2S1_Init();
+	bool ok = TIM3_Init();
+	return (ok && I2S1_Init());
 }
 
+// Initialize I2S but do not enable it.
+// Return bool success.
 static bool I2S1_Init(void) {
 	hi2s1.Instance = SPI1;
 	hi2s1.Init.Mode = I2S_MODE_MASTER_RX;
@@ -229,6 +228,7 @@ static bool I2S1_Init(void) {
 	return (HAL_I2S_Init(&hi2s1) == HAL_OK);
 }
 
+// Initialize DMA but do not enable DMA interrupts.
 static void DMA_Init(void) {
   __HAL_RCC_DMA1_CLK_ENABLE();
 
@@ -237,9 +237,15 @@ static void DMA_Init(void) {
 	#endif
 
   HAL_NVIC_SetPriority(DMA1_Channel1_IRQn, DMA_IRQ_PRIORITY, 0);
-  // note that the interrupt is not enabled here.
 }
 
+// Call this from external code to clear the maximum amplitude value.
+// It is carried out at the next DMA interrupt.
+void clearMaxAmpFollower(void) {
+	clearMaxAmpFollowerFlag = true;
+}
+
+// Used internally to actually clear the maximum amplitude value and reset the flag.
 static inline void clearAmpFollowerInternal(void) {
 	maxAmp_follower = 0;
 	clearMaxAmpFollowerFlag = false;
@@ -253,6 +259,7 @@ static bool startWarmupPeriod(void) {
 	if (HAL_TIM_Base_Start_IT(&htim3) != HAL_OK) {
 		return false;
 	}
+	micStable = false;
 	return true;
 }
 
@@ -263,7 +270,9 @@ void TIM3_IRQHandler(void) {
 	clearMaxAmpFollower();
 }
 
-static void TIM3_Init(void) {
+// Initialize TIMER3 but do not start it.
+// Return bool success.
+static bool TIM3_Init(void) {
 	TIM_ClockConfigTypeDef sClockSourceConfig = {0};
 	TIM_MasterConfigTypeDef sMasterConfig = {0};
 	htim3.Instance = TIM3;
@@ -279,27 +288,27 @@ static void TIM3_Init(void) {
 	htim3.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
 	htim3.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
 	if (HAL_TIM_Base_Init(&htim3) != HAL_OK) {
-		errorHandler(__func__, __LINE__, __FILE__);
+		return false;
 	}
 	sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
 	if (HAL_TIM_ConfigClockSource(&htim3, &sClockSourceConfig) != HAL_OK) {
-		errorHandler(__func__, __LINE__, __FILE__);
+		return false;
 	}
 	sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
 	sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
 	if (HAL_TIMEx_MasterConfigSynchronization(&htim3, &sMasterConfig) != HAL_OK) {
-		errorHandler(__func__, __LINE__, __FILE__);
+		return false;
 	}
 
-	// set priority but do not enable yet - may not be used
+	// Set priority but do not enable yet - may not be used
 	#if ((TMR3_IRQ_PRIORITY > 3)||(TMR3_IRQ_PRIORITY<0))
 		#error("Interrupt priority must be 0-3")
 	#endif
 	HAL_NVIC_SetPriority(TIM3_IRQn, TMR3_IRQ_PRIORITY, 0);
 
-	// Note that initialising the time base causes the UIF flag to get set: clear it.
-	// NB: TIM_FLAG_UPDATE == TIM_SR_UIF. "Update" means rollover.
+	// Initialising the time base causes the UIF flag to get set: clear it.
 	__HAL_TIM_CLEAR_FLAG(&htim3, TIM_SR_UIF);
+	return true;
 }
 
 // Enable: starts the I2S clock, warmup timer, DMA interrupts
@@ -317,7 +326,6 @@ bool enableMicrophone(bool bEnable) {
 			return false;
 		}
 		micEnabled = true;
-		micStable = false;
 		enableSPLcalculation(true);
 		amplitudeSettlingPeriods = 0;
 		clearAmpFollowerInternal();
@@ -326,45 +334,15 @@ bool enableMicrophone(bool bEnable) {
 		DMAintEnabled = true;
 	}
 	else {
-		DMAintEnabled = false;
 		NVIC_DisableIRQ(DMA1_Channel1_IRQn);
+		DMAintEnabled = false;
 		enableSPLcalculation(false);
 		if (HAL_I2S_DMAStop(&hi2s1) != HAL_OK) {
 			return false;
 		}
 		micEnabled = false;
-		micStable = false;
 	}
 	return true;
-}
-
-// use this only temporarily
-void pause_DMA_interrupts(bool bPause) {
-
-	/*
-	// need memory barrier instructions here just in case DMA interrupt had already been triggered
-	// and would execute in next few cycles. NB: DMB is not needed.
-	if (bPause) {
-		NVIC_DisableIRQ(DMA1_Channel1_IRQn);
-	}
-	else {
-		NVIC_EnableIRQ(DMA1_Channel1_IRQn);
-	}
-	__DSB();
-	__ISB();
-	// At this point, know that no DMA ISR is in progress and that it will not trigger until re-enabled.
-	 * */
-
-	if (bPause) {
-		__HAL_RCC_DMA1_CLK_DISABLE();
-		NVIC_DisableIRQ(DMA1_Channel1_IRQn);
-	}
-	else {
-		__HAL_RCC_DMA1_CLK_ENABLE();
-		NVIC_EnableIRQ(DMA1_Channel1_IRQn);
-	}
-	__DSB();
-	__ISB();
 }
 
 // Convert input raw I2S data into signed 32 bit numbers, assuming the I2S data is Left
@@ -372,16 +350,12 @@ void pause_DMA_interrupts(bool bPause) {
 // inBuflen is simply the number of elements in inBuf
 static void decodeI2SdataLch(const uint16_t inBuf[], const uint32_t inBuflen, int32_t outBuf[]) {
 	uint32_t outCount = 0;
-	for (uint32_t i = 0; i < inBuflen; i+=4) {
+	for (uint32_t i = 0; i < inBuflen; i += 4) {
 		// join MS16bits and LS16bits, then shift the result down 8 bits because it is a 24-bit
 		// value, rather than a 32-bit one.
 		outBuf[outCount] = ((int32_t) ((((uint32_t) inBuf[i]) << 16) | ((uint32_t) inBuf[i+1]))) >> 8;
 		outCount++;
 	}
-}
-
-void clearMaxAmpFollower(void) {
-	clearMaxAmpFollowerFlag = true;
 }
 
 void enableSPLcalculation(bool bEnable) {
@@ -391,20 +365,23 @@ void enableSPLcalculation(bool bEnable) {
 	SPL_calc_enabled = bEnable;
 }
 
-// Called when the first half of the DMA buffer is full, i.e. "HALF_BUFLEN" uint16s are in the first half of dmaBuffer
+// Called from the DMA ISR when the first half of the DMA buffer is full,
+// i.e. "HALF_BUFLEN" uint16s are in the first half of dmaBuffer
 void HAL_I2S_RxHalfCpltCallback(I2S_HandleTypeDef *hi2s) {
 	processHalfDMAbuffer(0);
 }
 
-// Called when the second half of the DMA buffer is full, i.e. "HALF_BUFLEN" uint16s are in the second half of dmaBuffer
+// Called from the DMA ISR when the second half of the DMA buffer is full,
+// i.e. "HALF_BUFLEN" uint16s are in the second half of dmaBuffer
 void HAL_I2S_RxCpltCallback(I2S_HandleTypeDef *hi2s) {
 	processHalfDMAbuffer(HALF_BUFLEN);
 }
 
 void processHalfDMAbuffer(uint32_t halfBufferStart) {
-	// Decode the raw data and copy it out of the DMA buffer: could now start refilling the DMA buffer
+	// Decode the raw I2S data and copy it out of the DMA buffer and into dataBuffer
 	decodeI2SdataLch((uint16_t *) &(dmaBuffer[halfBufferStart]), HALF_BUFLEN, (int32_t *) dataBuffer);
 	if (clearMaxAmpFollowerFlag) {
+		// External code requested max amplitude reset
 		clearAmpFollowerInternal();
 	}
 	// Filter the amplitude, find the maximum, and update maxAmp_follower if necessary:
@@ -416,7 +393,7 @@ void processHalfDMAbuffer(uint32_t halfBufferStart) {
 	else {
 		getFilteredMaxAmplitudeQ31((int32_t *) dataBuffer, (uint32_t) EIGHTH_BUFLEN, false, true);
 	}
-	// Calculate the A-weighted SPL, octave bands SPL, and update maxSPL_follower
+	// Calculate the A-weighted SPL and octave bands SPL
 	calculateSPLfast();
 	#ifdef DEBUG_PRINT
 		if (nspl < N_SPL_SAVE) {
@@ -430,17 +407,18 @@ void processHalfDMAbuffer(uint32_t halfBufferStart) {
 			}
 		}
 	#endif
-	sound_DMA_semaphore = true;
 }
 
 void HAL_I2S_ErrorCallback(I2S_HandleTypeDef *hi2s) {
-	errorHandler(__func__, __LINE__, __FILE__);
+	while (true) {
+	}
 }
 
+// Find smallest and largest ints in array
 static void findMinMax(int32_t * min, int32_t * max, const int32_t array[], const uint32_t length) {
 	max[0] = INT32_MIN;
 	min[0] = INT32_MAX;
-	for (uint32_t i = 0; i<length; i++) {
+	for (uint32_t i = 0; i < length; i++) {
 		if (array[i] < min[0]) {
 			min[0] = array[i];
 		}
@@ -451,12 +429,11 @@ static void findMinMax(int32_t * min, int32_t * max, const int32_t array[], cons
 }
 
 // Find the largest positive integer bitshift m, such that: smallVal*(2^m) <= bigVal.
-// There is no checking for erroneous inputs (e.g. bigVal < smallVal).
 // This is the largest upward bitshift that can be applied to smallVal such
 // that it is still smaller than bigVal.
 static uint32_t getPo2factor(uint32_t bigVal, uint32_t smallVal) {
 	uint32_t bitShift = 0;
-	if (smallVal == 0) { // this is the only situation which could cause an infinite loop (/0)
+	if ((bigVal < smallVal) || (smallVal == 0)) {
 		return 0;
 	}
 	while (bigVal >= smallVal) {
@@ -1000,7 +977,7 @@ static uint32_t getFilteredMaxAmplitude(const int32_t data[], const uint32_t len
 // Also find the largest absolute amplitude in the incoming data buffer and return this value.
 // Optionally also update the global maximum amplitude value if the new maximum is larger.
 // Uses Q31 operations.
-static uint32_t getFilteredMaxAmplitudeQ31(const int32_t data[], const uint32_t length,
+static uint32_t getFilteredMaxAmplitudeQ31(const int32_t * data, const uint32_t length,
 										   bool reset, bool updateMaxAmpFollower) {
 	static q31_t filtered = 0;
 	static q31_t lastData = 0;
@@ -1027,11 +1004,11 @@ static uint32_t getFilteredMaxAmplitudeQ31(const int32_t data[], const uint32_t 
 	q31_t maxAmp = 0;
 	q31_t minAmp = 0;
 
-	// Apply a bitshift to the incoming data to maximise the dynamic range BUT while also guaranteeing
-	// the intermediate value cannot overflow (three Q31 values are added together).
-	const uint32_t bitShift = 5;
+	// Apply a bitshift to the incoming data, before filtering, to maximise the dynamic range
+	// BUT while also ensuring the intermediate value cannot overflow (three Q31 values are added together).
+	const uint32_t scalingBitShift = 5;
 	for (uint32_t i = 0; i < length; i++) {
-		q31_t fx = (q31_t) (data[i] << bitShift);
+		q31_t fx = (q31_t) (data[i] << scalingBitShift);
 
 		// Arm saturating operations:
 		// D = A*B is: arm_mult_q31(&A, &B, &D, 1);
@@ -1057,35 +1034,29 @@ static uint32_t getFilteredMaxAmplitudeQ31(const int32_t data[], const uint32_t 
 		}
 	}
 	// Find the maximum absolute amplitude from the signed values:
-	uint32_t mn = abs(minAmp);
-	uint32_t mp = (uint32_t) maxAmp;
-	uint32_t absMaxAmp = 0;
-	if (mn > mp) {
-		absMaxAmp = mn;
-	}
-	else {
-		absMaxAmp = mp;
-	}
+	uint32_t absMin = abs(minAmp);
+	uint32_t absMax = (uint32_t) maxAmp;
+	uint32_t absMaxAmp = (absMin > absMax) ? absMin : absMax;
 
 	// Reverse the scaling bitshift
-	uint32_t ma32 = (uint32_t) (absMaxAmp >> bitShift);
+	uint32_t absMaxAmp32 = (uint32_t) (absMaxAmp >> scalingBitShift);
 
-	if (updateMaxAmpFollower && (ma32 > maxAmp_follower)) {
-		maxAmp_follower = ma32;
+	if (updateMaxAmpFollower && (absMaxAmp32 > maxAmp_follower)) {
+		maxAmp_follower = absMaxAmp32;
 	}
-
-	return ma32;
+	return absMaxAmp32;
 }
 
 
-// convert amplitude value in digital numbers to amplitude in milliPascals
-// works for peak amplitude, general amplitude, RMS amplitude.
-// returns integer and fractional part to 2 d.p.
-// Given that ampDN is at most 2^24, the output will alwyas fit in a uint16.
+// Convert an amplitude value in "DN" (digital numbers) to amplitude in milliPascals.
+// This works for peak amplitude, general amplitude, RMS amplitude.
+// Returns integer and fractional part to 2 d.p.
+// Given that ampDN is at most 2^24, the output will always fit in a uint16.
 void amplitude_DN_to_mPa(const uint32_t ampDN, uint16_t * intAmp_mPa, uint8_t * frac2dpAmp_mPa) {
-	/* NOTE: depends on details of microphone
+	/* NOTE: depends on the microphone sensitivity (S) and data bitdepth (N)
 	amp/Pa = (amp/DN)*ik;
-	where ik = sqrt(2)/((10^(sig/20))*((2^(NBits-1))-1)) = 3.3638e-6 Pa if sig = -26 dB
+	where ik = sqrt(2)/((10^((S/dB)/20))*((2^(N-1))-1))
+	e.g. If S = -26 dB and N = 24, then: ik = 3.3638e-3 mPa/DN
 	*/
 	const float ik_mPa = 3.3638e-3;
 	float amp = ((float) ampDN)*ik_mPa;
@@ -1094,16 +1065,15 @@ void amplitude_DN_to_mPa(const uint32_t ampDN, uint16_t * intAmp_mPa, uint8_t * 
 	intAmp_mPa[0] = (uint16_t) intpart;
 }
 
-// convert an integer amplitude mPa to DN
-// even the max possible input (UINT16_MAX) will not exceed the output limit (uint32)
+// Convert an integer amplitude in mPa to "DN" (digital numbers).
+// Even the maximum possible input (UINT16_MAX) will not exceed the output limit (UINT32_MAX).
 uint32_t amplitude_mPa_to_DN(uint16_t intAmp_mPa) {
-	/* NOTE: depends on details of microphone
+	/* NOTE: depends on the microphone sensitivity (S) and data bitdepth (N)
 	see also: amplitude_DN_to_mPa()
 	(amp/DN) = (amp/mPa)*iik
 	*/
 	const float iik = 297.28;
 	float amp = ((float) intAmp_mPa)*iik;
-
 	return ((uint32_t) amp);
 }
 
