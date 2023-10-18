@@ -15,16 +15,10 @@
 // clock setup
 #define SYSCLK_FREQ_HZ 32000000
 
-#define ENABLE_SLEEP_WAITING // sleep at end of main loop, otherwise do busy wait
-
-// found that >=3 consecutive reads rejects mains switching noise. Thus use ~5 reads.
-#define RESET_INTERRUPT_DEBOUNCE_POLLS 5
-
 /////////////////////////////////////////////////////////////////////////////
 
-#define SENSOR_INIT_ATTEMPTS 10
+// Sound settings
 
-// sound
 #define FFT_N 128
 #define I2S_AUDIOFREQ I2S_AUDIOFREQ_16K // can be 16, 32, 48
 

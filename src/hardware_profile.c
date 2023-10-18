@@ -25,7 +25,7 @@ void GPIO_Init(void) {
 		GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
 		HAL_GPIO_Init(ERROR_LED_GPIO_Port, &GPIO_InitStruct);
 
-		// Blue button
+		// Blue pushbutton
 		BLUE_BUTTON_GPIO_CLK_ENABLE();
 		#ifndef ENABLE_BLUE_BUTTON_INT
 			GPIO_InitStruct.Pin = BLUE_BUTTON_Pin;
