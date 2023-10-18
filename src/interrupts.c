@@ -6,8 +6,6 @@
 static volatile uint32_t time_ms_MS = 0, time_ms_LS = 0;
 
 volatile bool blueButtonPressed = false;
-volatile bool U6interruptSemaphore = false;
-volatile bool U7interruptSemaphore = false;
 
 void NMI_Handler(void) {
 	errorHandler(__func__, __LINE__, __FILE__);
@@ -48,21 +46,6 @@ uint64_t get_time_ms(void) {
 	}
 
 	return ((((uint64_t) t_ms_MS) << 32)|((uint64_t) t_ms_LS));
-}
-
-// this gives an int64 value which is never repeated
-int64_t get_timestamp_us(void)
-{
-    static uint64_t last_time_us = 0;
-
-    uint64_t t_us = get_time_us();
-
-    if (t_us == last_time_us) {
-    	t_us = t_us + (UINT64_C(1)); // to prevent a duplicated value
-    }
-    last_time_us = t_us;
-	int64_t system_current_time = (int64_t) t_us; // this cast is safe for the next few thousand years
-    return system_current_time;
 }
 
 void SysTick_Handler(void) {
