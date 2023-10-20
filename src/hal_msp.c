@@ -63,7 +63,7 @@ void HAL_I2S_MspInit(I2S_HandleTypeDef* hi2s)
     	errorHandler(__func__, __LINE__, __FILE__);
     }
 
-    __HAL_LINKDMA(hi2s,hdmarx,hdma_spi1_rx);
+    __HAL_LINKDMA(hi2s, hdmarx, hdma_spi1_rx);
   }
 
 }

@@ -33,6 +33,7 @@ int main(void) {
 	if (!UART_Init()) {
 		errorHandler(__func__, __LINE__, __FILE__);
 	}
+
 	#ifdef DEBUG_PRINT
 		const char * startupReason = getStartupReason();
 		printSerial("Reset flag(s): %s\n", startupReason);
@@ -48,14 +49,20 @@ int main(void) {
 
 	while (true) {
 
-		getSoundDataStruct(&soundData, true, true);
-		if (true) {
-			printAllData(&soundData);
-			clearMaxAmpFollower(); // move this into function
+		while (!SPL_calc_complete) {
+			printSerial("hi\n");
 		}
+		SPL_calc_complete = false;
+		printSerial("%u.%u\n", (uint32_t) SPL_int, (uint32_t) SPL_frac_1dp);
+
+		//getSoundDataStruct(&soundData, true, true);
+		//if (true) {
+		//	printAllData(&soundData);
+		//	clearMaxAmpFollower(); // move this into function
+		//}
 
 		// Sleep until next interrupt
-		HAL_PWR_EnterSLEEPMode(PWR_MAINREGULATOR_ON, PWR_SLEEPENTRY_WFI);
+		//HAL_PWR_EnterSLEEPMode(PWR_MAINREGULATOR_ON, PWR_SLEEPENTRY_WFI);
 	}
 	return 0;
 }

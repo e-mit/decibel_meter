@@ -13,9 +13,13 @@ volatile bool TIM15_flag = false;
 ////////////////////////////////////////
 
 void GPIO_Init(void) {
-	GPIO_InitTypeDef GPIO_InitStruct = {0};
+	__HAL_RCC_GPIOA_CLK_ENABLE();
+	__HAL_RCC_GPIOB_CLK_ENABLE();
+	__HAL_RCC_GPIOC_CLK_ENABLE();
 
 	#ifdef NUCLEO_BOARD
+		GPIO_InitTypeDef GPIO_InitStruct = {0};
+
 		// LED
 		ERROR_LED_GPIO_CLK_ENABLE();
 		HAL_GPIO_WritePin(ERROR_LED_GPIO_Port, ERROR_LED_Pin, GPIO_PIN_RESET);
@@ -53,9 +57,7 @@ void errorHandler(const char * func, uint32_t line, const char * file) {
 	#ifdef NUCLEO_BOARD
 		HAL_GPIO_WritePin(ERROR_LED_GPIO_Port, ERROR_LED_Pin, GPIO_PIN_SET);
 	#endif
-	#ifdef DEBUG_PRINT
-		printSerial("Error in %s at line %u in file: %s\n", func, line, file);
-	#endif
+	printSerial("Error in %s at line %u in file: %s\n", func, line, file);
 	while (true) {
 	}
 }

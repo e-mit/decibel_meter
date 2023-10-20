@@ -16,27 +16,26 @@
 #include <stddef.h>
 #include "sensor_constants.h"
 
-volatile bool SPL_calc_complete = true; // set true after every SPL calculation, which may be on every DMA ISR
-										// OR every N ISRs, depending on filter settings.
+volatile bool SPL_calc_complete = false; // set true after every SPL calculation, which may be on every DMA ISR
+										 // OR every N ISRs, depending on filter settings.
 
 ////////////////////////////////////////////////
 
 // private state variables (static or read through inline func):
-volatile bool micEnabled = false; // whether it is being clocked
 volatile bool DMAintEnabled = false; // whether interrupts can fire
 volatile bool micStable = false; // goes false when warmup time is complete
 
 #ifdef FILTER_SPL
-static volatile int32_t spl_int_sum = 0;
-static volatile int32_t spl_frac1dp_sum = 0;
-static volatile int32_t band_spl_int_sum[SOUND_FREQ_BANDS] = {0};
-static volatile int32_t band_spl_frac1dp_sum[SOUND_FREQ_BANDS] = {0};
-static volatile uint32_t spl_sum_count = 0;
-volatile uint32_t countCopy = 0;
+	static volatile int32_t spl_int_sum = 0;
+	static volatile int32_t spl_frac1dp_sum = 0;
+	static volatile int32_t band_spl_int_sum[SOUND_FREQ_BANDS] = {0};
+	static volatile int32_t band_spl_frac1dp_sum[SOUND_FREQ_BANDS] = {0};
+	static volatile uint32_t spl_sum_count = 0;
+	volatile uint32_t countCopy = 0;
 #endif
 
 // variables as integer-fraction representation:
-static volatile int32_t SPL_int = 0, SPL_frac_1dp = 0;
+volatile int32_t SPL_int = 0, SPL_frac_1dp = 0;
 static volatile int32_t bandSPL_int[SOUND_FREQ_BANDS] = {0}, bandSPL_frac_1dp[SOUND_FREQ_BANDS] = {0};
 
 static volatile uint32_t maxAmp_follower = 0; // stores running maximum until cleared by user
@@ -199,6 +198,7 @@ void getSoundDataStruct(SoundData_t * data, bool getSPLdata, bool getMaxAmpData)
 }
 
 void DMA1_Channel1_IRQHandler(void) {
+	printSerial("X\n");
 	#ifdef DEBUG_SIGNALS
 		HAL_GPIO_WritePin(TEST1_OUTPUT_GPIO_Port, TEST1_OUTPUT_Pin, GPIO_PIN_SET);
 	#endif
@@ -316,18 +316,19 @@ static bool TIM3_Init(void) {
 // Disable: stops the DMA interrupts and stops I2S clock.
 // Return: bool(success)
 bool enableMicrophone(bool bEnable) {
+	static bool micEnabled = false;
 	if (bEnable == micEnabled) {
 		return true;
 	}
 	if (bEnable) {
-		if (!startWarmupPeriod()) {
-			return false;
-		}
+		//if (!startWarmupPeriod()) {
+		//	return false;
+		//}
 		if (HAL_I2S_Receive_DMA(&hi2s1, (uint16_t *) dmaBuffer, HALF_BUFLEN) != HAL_OK) {
 			return false;
 		}
 		micEnabled = true;
-		enableSPLcalculation(true);
+		reset_SPL_calculation_state();
 		amplitudeSettlingPeriods = 0;
 		clearAmpFollowerInternal();
 		__HAL_DMA_CLEAR_FLAG(&hdma_spi1_rx, DMA_ISR_TCIF1 | DMA_ISR_HTIF1 | DMA_ISR_TEIF1 | DMA_ISR_GIF1);
@@ -337,7 +338,6 @@ bool enableMicrophone(bool bEnable) {
 	else {
 		NVIC_DisableIRQ(DMA1_Channel1_IRQn);
 		DMAintEnabled = false;
-		enableSPLcalculation(false);
 		if (HAL_I2S_DMAStop(&hi2s1) != HAL_OK) {
 			return false;
 		}
@@ -359,27 +359,24 @@ static void decodeI2SdataLch(const uint16_t inBuf[], const uint32_t inBuflen, in
 	}
 }
 
-void enableSPLcalculation(bool bEnable) {
-	if (bEnable) {
-		reset_SPL_semaphore();
-	}
-}
-
 // Called from the DMA ISR when the first half of the DMA buffer is full,
 // i.e. "HALF_BUFLEN" uint16s are in the first half of dmaBuffer
 void HAL_I2S_RxHalfCpltCallback(I2S_HandleTypeDef *hi2s) {
+	printSerial("A");
 	processHalfDMAbuffer(0);
 }
 
 // Called from the DMA ISR when the second half of the DMA buffer is full,
 // i.e. "HALF_BUFLEN" uint16s are in the second half of dmaBuffer
 void HAL_I2S_RxCpltCallback(I2S_HandleTypeDef *hi2s) {
+	printSerial("B");
 	processHalfDMAbuffer(HALF_BUFLEN);
 }
 
 void processHalfDMAbuffer(uint32_t halfBufferStart) {
 	// Decode the raw I2S data and copy it out of the DMA buffer and into dataBuffer
 	decodeI2SdataLch((uint16_t *) &(dmaBuffer[halfBufferStart]), HALF_BUFLEN, (int32_t *) dataBuffer);
+	printSerial("C");
 	if (clearMaxAmpFollowerFlag) {
 		// External code requested max amplitude reset
 		clearAmpFollowerInternal();
@@ -410,8 +407,7 @@ void processHalfDMAbuffer(uint32_t halfBufferStart) {
 }
 
 void HAL_I2S_ErrorCallback(I2S_HandleTypeDef *hi2s) {
-	while (true) {
-	}
+	errorHandler(__func__, __LINE__, __FILE__);
 }
 
 // Find smallest and largest ints in array
@@ -757,7 +753,7 @@ static void calculateSPLfast(void) {
 		FFTdata[count + 1] = 0;
 		count += 2;
 	}
-
+	printSerial("D");
 	#ifdef DEBUG_PRINT
 		printSerial("Input: min = %i, max = %i, centre = %i, amplitude = %i, bitshift = %i\n\n\n",
 				     min, max, centre, amplitude, bitShift);
@@ -794,7 +790,7 @@ static void calculateSPLfast(void) {
 	if (min > max) {
 		max = min;
 	}
-
+	printSerial("E");
 	// Calculate the largest bitshift needed to fill the available range without saturating
 	uint32_t amplitude2 = ((uint32_t) max) + BIT_ROUNDING_MARGIN;
 	uint32_t bitShift2 = getPo2factor((uint32_t) INT32_MAX, amplitude2);
@@ -837,7 +833,7 @@ static void calculateSPLfast(void) {
 			bandSum[i] = bandSum[i] >> absShift;
 		}
 	}
-
+	printSerial("F");
 	// Add on the dB terms accounting for the microphone parameters
 	// and (only for the A-weighted SPL) the weighting scale factor
 	scaleSPL(sumSq, tenlog10SF_int, tenlog10SF_frac, (int32_t *) &SPL_int, (int32_t *) &SPL_frac_1dp);
@@ -892,22 +888,24 @@ static void calculateSPLfast(void) {
 	#endif
 }
 
-// if filtering, also reset the filter state
-void reset_SPL_semaphore(void) {
-#ifdef FILTER_SPL
-	spl_int_sum = 0;
-	spl_frac1dp_sum = 0;
-
-	for (uint32_t i=0; i<SOUND_FREQ_BANDS; i++) {
-		band_spl_int_sum[i] = 0;
-		band_spl_frac1dp_sum[i] = 0;
-	}
-
-	spl_sum_count = 0;
-#endif
+void reset_SPL_calculation_state(void) {
 	SPL_calc_complete = false;
+	SPL_int = 0;
+	SPL_frac_1dp = 0;
+	for (uint32_t i = 0; i < SOUND_FREQ_BANDS; i++) {
+		bandSPL_int[i] = 0;
+		bandSPL_frac_1dp[i] = 0;
+	}
+	#ifdef FILTER_SPL
+		spl_int_sum = 0;
+		spl_frac1dp_sum = 0;
+		spl_sum_count = 0;
+		for (uint32_t i = 0; i < SOUND_FREQ_BANDS; i++) {
+			band_spl_int_sum[i] = 0;
+			band_spl_frac1dp_sum[i] = 0;
+		}
+	#endif
 }
-
 
 // Find the final SPL value by adding the terms accounting for the
 // microphone parameters and (only for weighted SPL) the weighting scale factor
@@ -971,9 +969,9 @@ static uint32_t getFilteredMaxAmplitude(const int32_t data[], const uint32_t len
 
 #endif
 
-// Apply a simple single-pole hi-pass IIR filter to the incoming data to remove the dc offset.
-// Also find the largest absolute amplitude in the incoming data buffer and return this value.
+// Find and return the largest absolute amplitude in the input data buffer.
 // Optionally also update the global maximum amplitude value if the new maximum is larger.
+// Uses a simple single-pole hi-pass IIR filter to remove the dc offset in the input data.
 // Uses Q31 operations.
 static uint32_t getFilteredMaxAmplitudeQ31(const int32_t * data, const uint32_t length,
 										   bool reset, bool updateMaxAmpFollower) {

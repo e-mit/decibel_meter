@@ -9,18 +9,10 @@
 
 #define BIT_ROUNDING_MARGIN 4
 
-extern volatile bool sound_DMA_semaphore; // set true at end of every DMA ISR
+extern volatile bool SPL_calc_complete;
+extern volatile int32_t SPL_int, SPL_frac_1dp;
 
-// this is set true by the sound module when a new SPL reading is ready. This may be after every DMA interrupt
-// OR (if filter is enabled), after every N DMA interrupts.
-// also see function reset_SPL_semaphore();
-__attribute__((always_inline)) inline bool is_SPL_calc_complete(void) {
-	extern volatile bool SPL_calc_complete;
-	// set true after every SPL calculation, which may be on every DMA ISR
-	// OR every N ISRs, depending on filter settings.
-	return (bool) SPL_calc_complete;
-}
-void reset_SPL_semaphore(void);
+void reset_SPL_calculation_state(void);
 
 __attribute__((always_inline)) inline bool isMicEnabled(void) {
 	extern volatile bool micEnabled;
@@ -56,7 +48,6 @@ __attribute__((always_inline)) inline bool micHasStabilized(void) {
 
 bool sound_init(void);
 bool enableMicrophone(bool bEnable);
-void enableSPLcalculation(bool bEnable);
 void clearMaxAmpFollower(void); // on next cycle, will reset the max amp follower
 
 void processHalfDMAbuffer(uint32_t halfBufferStart);
