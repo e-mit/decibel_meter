@@ -95,8 +95,10 @@ static uint32_t getPo2factor(uint32_t bigVal, uint32_t smallVal);
 #endif
 static void processHalfDMAbuffer(uint32_t halfBufferStart);
 static void calculateSPLfast(void);
-static uint32_t getFilteredMaxAmplitudeQ31(const int32_t data[], const uint32_t length,
+static uint32_t getFilteredMaxAmplitudeQ31(const int32_t * data, const uint32_t length,
 										   bool reset, bool updateMaxAmpFollower);
+static void scaleSPL(uint64_t sumSq, const int32_t add_int, const int32_t add_frac,
+		             int32_t * SPLintegerPart, int32_t * SPLfractionalPart);
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -442,7 +444,7 @@ static void processHalfDMAbuffer(uint32_t halfBufferStart) {
 		getFilteredMaxAmplitudeQ31((int32_t *) dataBuffer, (uint32_t) EIGHTH_BUFLEN, false, true);
 	}
 	if (SPL_calc_enabled) {
-		// Calculate the A-weighted SPL and octave bands SPL		
+		// Calculate the A-weighted SPL and octave bands SPL
 		calculateSPLfast();
 		#ifdef DEBUG_AND_TESTS
 		if (nspl < N_SPL_SAVE) {
@@ -480,20 +482,19 @@ static void findMinMax(int32_t * min, int32_t * max, const int32_t array[], cons
 	}
 }
 
-// find the largest positive integer bitshift m, such that: smallVal*(2^m) <= bigVal
-// there is no checking for erroneous inputs (e.g. bigVal < smallVal).
+// Find the largest positive integer bitshift m, such that: smallVal*(2^m) <= bigVal.
 // This is the largest upward bitshift that can be applied to smallVal such
 // that it is still smaller than bigVal.
 static uint32_t getPo2factor(uint32_t bigVal, uint32_t smallVal) {
 	uint32_t bitShift = 0;
-	if (smallVal == 0) { // this is the only situation which could cause an infinite loop (/0)
+	if ((bigVal < smallVal) || (smallVal == 0)) {
 		return 0;
 	}
 	while (bigVal >= smallVal) {
 		bigVal = bigVal >> 1;
 		bitShift++;
 	}
-	bitShift-=1; // correct for going one shift too far
+	bitShift -= 1; // correction for going one shift too far
 	return bitShift;
 }
 
@@ -714,7 +715,11 @@ static void calculateSPL(void) {
 }
 #endif
 
-// with improvements for fast processing (e.g. no floats)
+// Calculate A-weighted SPL and frequency-band SPL from input data.
+// dataBuffer must contain (at least) FFT_N values
+// dataBuffer is reused for storage throughout this function. Since dataBuffer is shared by both halves of
+// the DMA buffer, this function must complete before the next DMA interrupt.
+// This uses integers, rather than floats, for improved speed.
 static void calculateSPLfast(void) {
 
 	// provide constants which depend on length of FFT/input sample and Fs
@@ -736,8 +741,7 @@ static void calculateSPLfast(void) {
 		#endif
 	#elif (I2S_FREQ == 31250)
 		#if (FFT_N == 128)
-			#warning("This choice of FFT_N and I2S_FREQ leads causes NO signal in the lowest octave band")
-			// bandSPL = 0 means log(0) but also is bad anyway.
+			#warning("This choice of FFT_N and I2S_FREQ results in NO signal in the lowest octave band")
 			arm_cfft_instance_q31 S = arm_cfft_sR_q31_len128;
 			const uint16_t * sqWsc = sqWsc_Fs31250_128;
 			const int32_t tenlog10SF_int = tenlog10SF_int_Fs31250_128;
@@ -790,41 +794,39 @@ static void calculateSPLfast(void) {
 		#error("N-points and/or Fs not implemented yet")
 	#endif
 
-	// find max, min values of the input data
+	// Find max, min values of the input data
 	int32_t max, min;
 	findMinMax(&min, &max, (int32_t *) dataBuffer, FFT_N);
 
-	// calc centre of signal range, and the largest bitshift needed to fill the available
-	// range without saturating
-	int32_t centre = (min/2) + (max/2); //prev used bitshift here -> no
-	uint32_t amplitude = (uint32_t) (max - centre + 4); // add 4 for safety margin
-	uint32_t bitShift = getPo2factor((uint32_t) INT32_MAX, amplitude);
+	// Calculate the centre of the signal range, and the largest bitshift needed to
+	// fill the available range without saturating
+	int32_t centre = (min/2) + (max/2);
+	uint32_t amplitude = (uint32_t) (max - centre + BIT_ROUNDING_MARGIN);
+	uint32_t bitShift = getPo2factor(INT32_MAX, amplitude);
 
-	// apply offset and bitshift and put data into input vector
-	// NOTE: bitshift could be done as Q31, and thus saturating, but this should be unnecessary.
+	// Apply offset and bitshift and put data into FFT input array
 	uint32_t count = 0;
-	for (uint32_t i = 0; i<FFT_N; i++) {
-		FFTdata[count] = (q31_t) ((dataBuffer[i] - centre) << bitShift); // uses a left-shift on a signed int: appears OK
-		FFTdata[count+1] = 0; // MUST do this because the zeros get overwritten later, then array is reused.
-		count+=2;
+	for (uint32_t i = 0; i < FFT_N; i++) {
+		FFTdata[count] = (q31_t) ((dataBuffer[i] - centre) << bitShift);
+		FFTdata[count + 1] = 0;
+		count += 2;
 	}
-
-	#if defined(PRINT_TESTS) && defined(DEBUG_AND_TESTS)
-		printSerial("Input min = %i, max = %i, centre = %i, amplitude = %i, bitshift = %i\n\n\n",
+	#ifdef DEBUG_PRINT
+		printSerial("Input: min = %i, max = %i, centre = %i, amplitude = %i, bitshift = %i\n\n\n",
 				     min, max, centre, amplitude, bitShift);
 		printSerial("Scaled FFT real input\n");
-		for (uint32_t i = 0; i<(2*TEST_LENGTH_SAMPLES); i+=2) {
+		for (uint32_t i = 0; i < (2*TEST_LENGTH_SAMPLES); i += 2) {
 			printSerial("%i\n", FFTdata[i]);
 		}
 		printSerial("\n\n\n\n");
 	#endif
 
-	// calc FFT
-	arm_cfft_q31(&S, FFTdata, 0, 1); // the output is internally divided by N (#points)
+	// Calculate the FFT; the output is internally divided by FFT_N (number of points)
+	arm_cfft_q31(&S, FFTdata, 0, 1);
 
-	#if defined(PRINT_TESTS) && defined(DEBUG_AND_TESTS)
+	#ifdef DEBUG_PRINT
 		printSerial("Raw FFT output\n");
-		for (uint32_t i=0; i<(TEST_LENGTH_SAMPLES); i++) {
+		for (uint32_t i = 0; i < (TEST_LENGTH_SAMPLES); i++) {
 			printSerial("%i\n", FFTdata[i]);
 		}
 		printSerial("\n\n\n\n");
@@ -845,89 +847,65 @@ static void calculateSPLfast(void) {
 	if (min > max) {
 		max = min;
 	}
-
-	uint32_t amplitude2 = ((uint32_t) max) + 4; // add 4 for safety margin
+	// Calculate the largest bitshift needed to fill the available range without saturating
+	uint32_t amplitude2 = ((uint32_t) max) + BIT_ROUNDING_MARGIN;
 	uint32_t bitShift2 = getPo2factor((uint32_t) INT32_MAX, amplitude2);
 
-	/// apply the bitshift (not to dc bin, and to 1st half of data only), then get abs mag of each bin
+	// Apply the bitshift (not to the dc bins, and to 1st half of data only), then get the
+	// absolute square magnitude of each bin
 	for (uint32_t i = 2; i<FFT_N; i++) {
-		FFTdata[i] = (q31_t) (FFTdata[i] << bitShift2); // uses a left-shift on a signed int: appears OK
+		FFTdata[i] = (q31_t) (FFTdata[i] << bitShift2);
 	}
-	q31_t * sqmag = (q31_t *) dataBuffer; // nb: this re-uses the input dataBuffer as working mem.
-	arm_cmplx_mag_squared_q31(FFTdata, sqmag, FFT_N/2); // output is in 3.29 format
+	q31_t * sqmag = (q31_t *) dataBuffer; // this re-uses the input dataBuffer as working memory
+	arm_cmplx_mag_squared_q31(FFTdata, sqmag, FFT_N/2);
 
-	// now apply weighting and sum, excluding the dc bin. Also sum for unweighted octave band SPL:
+	// Apply the A-weighting and sum, excluding the dc bin.
+	// Also sum for the unweighted frequency-band SPL:
 	uint64_t bandSum[SOUND_FREQ_BANDS] = {0};
 	uint64_t sumSq = 0; // sum of squared weighted magnitudes (scaled)
-	for (uint32_t i=1; i<(FFT_N/2); i++) {
-		sumSq += ((uint64_t)sqmag[i])*((uint64_t) sqWsc[i]);
+	for (uint32_t i = 1; i < (FFT_N/2); i++) {
+		sumSq += ((uint64_t) sqmag[i])*((uint64_t) sqWsc[i]);
 		if (bandIDs[i] != SOUND_FREQ_BANDS) {
-			// this FFT bin DOES belong in one of the octave-freq-bands:
-			bandSum[bandIDs[i]] += (uint64_t)sqmag[i];
+			// This FFT bin DOES belong in one of the frequency-bands:
+			bandSum[bandIDs[i]] += (uint64_t) sqmag[i];
 		}
 	}
 
-	// reverse the scalings (which have been applied explicitly and implicitly) using a bitshift
-	int32_t bs = ((int32_t) (2*bitShift)) + ((int32_t) (2*bitShift2)) -3 -31; // right shift this amount
-	uint32_t absShift = (uint32_t) abs(bs);
-	if (bs < 0) {
-		// ie a left-shift
-		sumSq = (sumSq << absShift);
-		for (uint32_t i=0; i<SOUND_FREQ_BANDS; i++) {
-			bandSum[i] = (bandSum[i] << absShift);
+	// Reverse the (explicit and implicit) scalings using a bitshift.
+	// Shifts applied before squaring are doubled when reversed.
+	int32_t bs_right = ((int32_t) (2*bitShift)) + ((int32_t) (2*bitShift2)) -3 -31;
+	uint32_t absShift = (uint32_t) abs(bs_right);
+	if (bs_right < 0) {
+		// Left shift
+		sumSq = sumSq << absShift;
+		for (uint32_t i = 0; i < SOUND_FREQ_BANDS; i++) {
+			bandSum[i] = bandSum[i] << absShift;
 		}
 	}
 	else {
-		// right shift
-		sumSq = (sumSq >> absShift);
-		for (uint32_t i=0; i<SOUND_FREQ_BANDS; i++) {
-			bandSum[i] = (bandSum[i] >> absShift);
+		// Right shift
+		sumSq = sumSq >> absShift;
+		for (uint32_t i = 0; i < SOUND_FREQ_BANDS; i++) {
+			bandSum[i] = bandSum[i] >> absShift;
 		}
 	}
 
-	// Add on terms accounting for microphone parameters
-	// and (only for weighted SPL) the weighting scale factor
-
-	/* NB: additiveTerm is constant for a given microphone:
-	const = sqrt(2)/(((2^(Nbits-1))-1)*(10^(sig/20))); % = 3.3638e-06
-	additiveTerm = 20*log10(const/(20e-6)); % = -1.5484097e+01 = -15.5 to 1.d.p.
-	These values assume the mic sensitivity = -26dB
-	 */
-	const int32_t additiveTerm_int = -15;
-	const int32_t additiveTerm_frac = -5;
-
-	// calculate: SPLvalue = (10.0*log10(sumSq)) + additiveTerm + tenlog10SF;
-	int32_t SPLintegerPart, SPLfractionalPart;
-	efficient_10log10(sumSq, &SPLintegerPart, &SPLfractionalPart);
-	SPLintegerPart = SPLintegerPart + additiveTerm_int + tenlog10SF_int;
-	SPLfractionalPart = SPLfractionalPart + additiveTerm_frac + tenlog10SF_frac;
-	// Apply correction if fractional part is not in range 0->9:
-	correctIntFracNumber(&SPLintegerPart, &SPLfractionalPart);
-	// copy to the volatile global object:
-	SPL_int = SPLintegerPart;
-	SPL_frac_1dp = SPLfractionalPart;
-
-	// for the band SPLs just add the mic correction, not the weighting "tenlog10SF" term
+	// Add on the dB terms accounting for the microphone parameters
+	// and (only for the A-weighted SPL) the weighting scale factor
+	scaleSPL(sumSq, tenlog10SF_int, tenlog10SF_frac, (int32_t *) &SPL_int, (int32_t *) &SPL_frac_1dp);
 	for (uint32_t i=0; i<SOUND_FREQ_BANDS; i++) {
-		//bandSPL[i] = (10.0*log10(bandSum[i])) + additiveTerm;
-
-		int32_t intPart, fracPart;
-		efficient_10log10(bandSum[i], &intPart, &fracPart);
-		bandSPL_int[i] = intPart + additiveTerm_int;
-		bandSPL_frac_1dp[i] = fracPart + additiveTerm_frac;
-		// Apply correction if fractional part is not in range 0->9:
-		correctIntFracNumber((int32_t *) &(bandSPL_int[i]), (int32_t *) &(bandSPL_frac_1dp[i]));
+		scaleSPL(bandSum[i], 0, 0, (int32_t *) &(bandSPL_int[i]), (int32_t *) &(bandSPL_frac_1dp[i]));
 	}
 
 	#ifdef FILTER_SPL
-	if (!SPL_calc_complete) {
-		spl_int_sum += SPLintegerPart;
-		spl_frac1dp_sum += SPLfractionalPart;
+		if (!SPL_calc_complete) {
+			spl_int_sum += SPL_int;
+			spl_frac1dp_sum += SPL_frac_1dp;
 
-		for (uint32_t i=0; i<SOUND_FREQ_BANDS; i++) {
-			band_spl_int_sum[i] += bandSPL_int[i];
-			band_spl_frac1dp_sum[i] += bandSPL_frac_1dp[i];
-		}
+			for (uint32_t i = 0; i < SOUND_FREQ_BANDS; i++) {
+				band_spl_int_sum[i] += bandSPL_int[i];
+				band_spl_frac1dp_sum[i] += bandSPL_frac_1dp[i];
+			}
 
 		spl_sum_count++;
 		if (spl_sum_count >= FILTER_SPL_N) {
@@ -939,17 +917,17 @@ static void calculateSPLfast(void) {
 	SPL_calc_complete = true;
 	#endif
 
-	#if defined(PRINT_TESTS) && defined(DEBUG_AND_TESTS)
-		printSerial("FFT output max = %i, amplitude2 = %i, bitshift2 = %i\n\n\n", max, amplitude2, bitShift2);
+	#ifdef DEBUG_PRINT
+		printSerial("FFT output: max = %i, amplitude = %i, bitshift = %i\n\n\n", max, amplitude2, bitShift2);
 
 		printSerial("Scaled FFT output:\n");
-		for (uint32_t i = 0; i<TEST_LENGTH_SAMPLES; i++) {
+		for (uint32_t i = 0; i < TEST_LENGTH_SAMPLES; i++) {
 			printSerial("%i\n", data[i]);
 		}
 		printSerial("\n\n\n\n");
 
 		printSerial("Squared magnitude:\n");
-		for (uint32_t i=0; i<(TEST_LENGTH_SAMPLES/2); i++) {
+		for (uint32_t i = 0; i < (TEST_LENGTH_SAMPLES/2); i++) {
 			printSerial("%i\n", sqmag[i]);
 		}
 		printSerial("\n\n\n\n");
@@ -958,13 +936,11 @@ static void calculateSPLfast(void) {
 		printU64hex(sumSq);
 		printSerial("\n\n");
 
-		for (uint32_t i=0; i<SOUND_FREQ_BANDS; i++) {
+		for (uint32_t i = 0; i < SOUND_FREQ_BANDS; i++) {
 			printSerial("band %i sumSq = ",i);
 			printU64hex(bandSum[i]);
-			printSerial(" = %.5f\n",(float) bandSum[i]);
 		}
-
-		printSerial("bs = %i\n", bs);
+		printSerial("\nbs_right = %i\n\n", bs_right);
 
 	#endif
 }
@@ -985,6 +961,25 @@ void reset_SPL_semaphore(void) {
 	SPL_calc_complete = false;
 }
 
+// Find the final SPL value by adding the terms accounting for the
+// microphone parameters and (only for weighted SPL) the weighting scale factor
+static void scaleSPL(uint64_t sumSq, const int32_t add_int, const int32_t add_frac,
+		             int32_t * SPLintegerPart, int32_t * SPLfractionalPart) {
+	/* micTerm is constant for a given microphone:
+	const = sqrt(2)/(((2^(Nbits-1))-1)*(10^((S/dB)/20))); % = 3.3638e-06
+	micTerm = 20*log10(const/(20e-6)); % = -1.5484097e+01 = -15.5 to 1.d.p.
+	These values assume the mic sensitivity S = -26dB
+	 */
+	const int32_t micTerm_int = -15;
+	const int32_t micTerm_frac = -5;
+
+	// Calculate: SPLvalue = (10.0*log10(sumSq)) + micTerm + addTerm;
+	efficient_10log10(sumSq, SPLintegerPart, SPLfractionalPart);
+	SPLintegerPart[0] = SPLintegerPart[0] + micTerm_int + add_int;
+	SPLfractionalPart[0] = SPLfractionalPart[0] + micTerm_frac + add_frac;
+	// Apply correction if fractional part is not in range 0->9:
+	correctIntFracNumber(SPLintegerPart, SPLfractionalPart);
+}
 
 #ifdef DEBUG_AND_TESTS
 
@@ -1027,28 +1022,31 @@ static uint32_t getFilteredMaxAmplitude(const int32_t data[], const uint32_t len
 
 #endif
 
-// as for getFilteredMaxAmplitude() but use Q31 operations.
-static uint32_t getFilteredMaxAmplitudeQ31(const int32_t data[], const uint32_t length,
+// Find and return the largest absolute amplitude in the input data buffer.
+// Optionally also update the global maximum amplitude value if the new maximum is larger.
+// Uses a simple single-pole hi-pass IIR filter to remove the dc offset in the input data.
+// Uses Q31 operations.
+static uint32_t getFilteredMaxAmplitudeQ31(const int32_t * data, const uint32_t length,
 										   bool reset, bool updateMaxAmpFollower) {
 	static q31_t filtered = 0;
 	static q31_t lastData = 0;
-	// Want a filter with cutoff of fc = 10Hz. The coeffs will depend on Fs according to:
+	// Want a filter with cutoff of fc = 10Hz. The coefficients depend on Fs according to:
 	// b = exp(-2.pi.(1/Fs).fc)
 	// a0 = (1+b)/2
 	// a1 = -a0
-	// then convert to Q31 by dividing by 2^-31 and then rounding
-#if (I2S_AUDIOFREQ == I2S_AUDIOFREQ_16K)
-	q31_t a0 = 2143174546, b = 2138865443;
-#elif (I2S_AUDIOFREQ == I2S_AUDIOFREQ_32K)
-	q31_t a0 = 2145326931, b = 2143170214;
-#elif (I2S_AUDIOFREQ == I2S_AUDIOFREQ_48K)
-	q31_t a0 = 2146135192, b = 2144786735;
-#else
-	#error "Undefined I2S AUDIO FREQ"
-#endif
+	// Then convert to Q31 by dividing by 2^-31 and then rounding.
+	#if (I2S_AUDIOFREQ == I2S_AUDIOFREQ_16K)
+		q31_t a0 = 2143174546, b = 2138865443;
+	#elif (I2S_AUDIOFREQ == I2S_AUDIOFREQ_32K)
+		q31_t a0 = 2145326931, b = 2143170214;
+	#elif (I2S_AUDIOFREQ == I2S_AUDIOFREQ_48K)
+		q31_t a0 = 2146135192, b = 2144786735;
+	#else
+		#error "Undefined I2S AUDIO FREQ"
+	#endif
 
 	if (reset) {
-		// reset the state of the digital filter; e.g. if the mic has been disabled then re-enabled.
+		// Reset the state of the digital filter; e.g. if the mic has been disabled then re-enabled.
 		filtered = 0;
 		lastData = 0;
 	}
