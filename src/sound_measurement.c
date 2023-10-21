@@ -356,32 +356,17 @@ static void processHalfDMAbuffer(uint32_t halfBufferStart) {
 	// Decode the raw I2S data and copy it out of the DMA buffer and into dataBuffer
 	decodeI2SdataLch((uint16_t *) &(dmaBuffer[halfBufferStart]), HALF_BUFLEN, (int32_t *) dataBuffer);
 	// Filter the amplitude, find the maximum, and update maximumAmplitude if necessary:
+	getFilteredMaxAmplitudeQ31((int32_t *) dataBuffer, (uint32_t) EIGHTH_BUFLEN,
+			                   amplitudeSettlingPeriods == 0,
+							   amplitudeSettlingPeriods >= N_AMP_SETTLE_HALF_PERIODS);
 	if (amplitudeSettlingPeriods < N_AMP_SETTLE_HALF_PERIODS) {
 		// Need to allow the IIR filter to settle
-		getFilteredMaxAmplitudeQ31((int32_t *) dataBuffer, (uint32_t) EIGHTH_BUFLEN, amplitudeSettlingPeriods == 0, false);
 		amplitudeSettlingPeriods++;
-	}
-	else {
-		getFilteredMaxAmplitudeQ31((int32_t *) dataBuffer, (uint32_t) EIGHTH_BUFLEN, false, true);
 	}
 	if (SPL_calc_enabled) {
 		// Calculate the A-weighted SPL and octave bands SPL
 		calculateSPLfast();
-		#ifdef DEBUG_AND_TESTS
-		if (nspl < N_SPL_SAVE) {
-			SPL_intBuf[nspl] = SPL_int;
-			nspl++;
-		}
-		#endif
 	}
-	#ifdef DEBUG_AND_TESTS
-		if (autoStopI2S) {
-			NhalfBuffersCmpltd++;
-			if (NhalfBuffersCmpltd >= NhalfBufLimit) {
-				enableMicrophone(false);
-			}
-		}
-	#endif
 	sound_DMA_semaphore = true;
 }
 
