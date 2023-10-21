@@ -3,17 +3,11 @@
 #include "arm_math.h"
 #include "sound_measurement.h"
 #include "arm_const_structs.h"
-#include "stm32g0xx_hal.h"
 #include <stdbool.h>
 #include "hardware_profile.h"
 #include "sound_LUTs.h"
-#include "sound_test_data.h"
-#include <string.h>
-#include "efficient_10log10.h"
 #include "math.h"
 #include "utilities.h"
-#include <stddef.h>
-#include "sensor_constants.h"
 
 extern void printSerial(const char* format, ...);
 extern void errorHandler(const char * func, uint32_t line, const char * file);

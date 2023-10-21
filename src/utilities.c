@@ -1,5 +1,4 @@
 #include "utilities.h"
-#include "stm32g0xx_hal.h"
 #include <math.h>
 #include <stdint.h>
 #include "efficient_10log10.h"

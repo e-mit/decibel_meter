@@ -14,7 +14,6 @@
 #include "arm_const_structs.h"
 #include "sound_measurement.h"
 #include "math.h"
-#include "sensor_constants.h"
 #include "UART.h"
 #include "utilities.h"
 
@@ -35,7 +34,7 @@ int main(void) {
 
 	#ifdef DEBUG_PRINT
 	const char * startupReason = getStartupReason();
-	serialPrint("Restart reason: %s\n", startupReason);
+	printSerial("Restart reason: %s\n", startupReason);
 	#endif
 
 	if (!sound_init()) {

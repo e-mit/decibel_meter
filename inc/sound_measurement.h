@@ -5,7 +5,6 @@
 #include "stm32g0xx_hal.h"
 #include <stdbool.h>
 #include "project_config.h"
-#include "sensor_constants.h"
 
 #define BIT_ROUNDING_MARGIN 4
 
@@ -22,6 +21,25 @@
 #define EIGHTH_BUFLEN FFT_N
 #define HALF_BUFLEN (EIGHTH_BUFLEN*4)
 #define FULL_BUFLEN (HALF_BUFLEN*2)
+
+////////////////////////////////////////////////////////
+
+// Frequency bands for sound level measurement
+#define SOUND_FREQ_BANDS 6
+static const uint16_t sound_band_mids_Hz[SOUND_FREQ_BANDS] = {125, 250, 500, 1000, 2000, 4000};
+static const uint16_t sound_band_edges_Hz[SOUND_FREQ_BANDS+1] = {88, 177, 354, 707, 1414, 2828, 5657};
+
+///////////////////////////////////////////////////////////
+
+typedef struct __attribute__((packed)) {
+  uint8_t  SPL_dBA_int;
+  uint8_t  SPL_dBA_fr_1dp;
+  uint8_t  SPL_bands_dB_int[SOUND_FREQ_BANDS];
+  uint8_t  SPL_bands_dB_fr_1dp[SOUND_FREQ_BANDS];
+  uint16_t peak_amp_mPa_int;
+  uint8_t  peak_amp_mPa_fr_2dp;
+  uint8_t  stable;
+} SoundData_t;
 
 ////////////////////////////////////////////////////////
 // User interface functions:
