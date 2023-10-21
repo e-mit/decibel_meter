@@ -102,34 +102,6 @@ bool SystemClock_Config(void) {
 	return true;
 }
 
-const char * getStartupReason(void) {
-	const char * reason = "Unknown";
-	if (__HAL_RCC_GET_FLAG(RCC_FLAG_PWRRST) == 1) {
-		reason = "BOR or POR/PDR reset";
-	}
-	if (__HAL_RCC_GET_FLAG(RCC_FLAG_OBLRST) == 1) {
-		reason = "Option byte loader reset";
-	}
-	if (__HAL_RCC_GET_FLAG(RCC_FLAG_PINRST) == 1) {
-		reason = "NRST pin reset";
-	}
-	if (__HAL_RCC_GET_FLAG(RCC_FLAG_SFTRST) == 1) {
-		reason = "Software reset";
-	}
-	if (__HAL_RCC_GET_FLAG(RCC_FLAG_IWDGRST) == 1) {
-		reason = "Independent watchdog reset";
-	}
-	if (__HAL_RCC_GET_FLAG(RCC_FLAG_WWDGRST) == 1) {
-		reason = "Window watchdog reset";
-	}
-	if (__HAL_RCC_GET_FLAG(RCC_FLAG_LPWRRST) == 1) {
-		reason = "Low power reset";
-	}
-	/* Clear source Reset Flag */
-	__HAL_RCC_CLEAR_RESET_FLAGS();
-	return reason;
-}
-
 bool UART_Init(void) {
 	uart.Instance = USART4;
 	uart.Init.BaudRate = UART_BAUD;

@@ -73,7 +73,6 @@ extern DMA_HandleTypeDef hdma_spi1_rx;
 void GPIO_Init(void);
 void errorHandler(const char * func, uint32_t line, const char * file);
 bool SystemClock_Config(void);
-const char * getStartupReason(void);
 bool UART_Init(void);
 void printString(char * str, uint16_t len);
 

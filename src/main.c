@@ -18,11 +18,6 @@ int main(void) {
 		errorHandler(__func__, __LINE__, __FILE__);
 	}
 
-	#ifdef DEBUG_PRINT
-	const char * startupReason = getStartupReason();
-	print("Restart reason: %s\n", startupReason);
-	#endif
-
 	if (!soundInit()) {
 		errorHandler(__func__, __LINE__, __FILE__);
 	}
