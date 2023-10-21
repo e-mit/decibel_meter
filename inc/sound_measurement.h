@@ -7,13 +7,6 @@
 #include "project_config.h"
 #include "sensor_constants.h"
 
-// what to do with the sound amplitude output pin:
-typedef enum amplThresType {
-	AMP_THRES_INTERRUPT = SOUND_INT_TYPE_LATCH, // AKA latching. If amplitude exceeds threshold, pin is asserted (0V) until "interrupt" is cleared.
-	AMP_THRES_COMPARATOR = SOUND_INT_TYPE_COMP, // on every loop (with well defined time interval) pin state is set depending on current amplitude.
-	AMP_THRES_OFF       // ie. pin is released (high impedance) and value of amplitude is ignored.
-} AmplitudeThresType_t;
-
 extern volatile bool sound_DMA_semaphore; // set true at end of every DMA ISR
 
 // this is set true by the sound module when a new SPL reading is ready. This may be after every DMA interrupt
@@ -42,11 +35,6 @@ __attribute__((always_inline)) inline bool micHasStabilized(void) {
 	return ((bool) micStable);// true means finished warming up
 }
 
-__attribute__((always_inline)) inline AmplitudeThresType_t getAmplThresType(void) {
-	extern volatile AmplitudeThresType_t ampl_thres_type;
-	return (AmplitudeThresType_t) ampl_thres_type;
-}
-
 #if (I2S_AUDIOFREQ == I2S_AUDIOFREQ_16K)
 	#define I2S_FREQ 15625 // the actual value
 #elif (I2S_AUDIOFREQ == I2S_AUDIOFREQ_32K)
@@ -70,12 +58,6 @@ void pause_DMA_interrupts(bool bPause);
 void enable_I2S_DMA_interrupts(bool bEnable); // starts DMA interrupts and maxAmp following
 void enableSPLcalculation(bool bEnable);
 void clearMaxAmpFollower(void); // on next cycle, will reset the max amp follower
-
-void setAmplitudeThreshold(uint32_t ampThresDN);
-bool isAmplitudeInterruptAsserted(void); // For amp interrupt mode only, indicates whether pin is asserted.
-void clearAmplitudeInterrupt(void); // does NOT clear the max amplitude follower value
-void setAmplitudeThresholdBehaviour(AmplitudeThresType_t type); // this is also the way of enabling/disabling interrupt
-
 void getSoundDataStruct(SoundData_t * data, bool getSPLdata, bool getMaxAmpData, uint32_t * pMaxAmp_DN);
 void amplitude_DN_to_mPa(uint32_t ampDN, uint16_t * intAmp_mPa, uint8_t * frac2dpAmp_mPa);
 uint32_t amplitude_mPa_to_DN(uint16_t intAmp_mPa);

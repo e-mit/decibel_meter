@@ -16,6 +16,8 @@
 #include <stddef.h>
 #include "sensor_constants.h"
 
+extern void errorHandler(const char * func, uint32_t line, const char * file);
+
 // global state vars:
 // micEnabled is not declared static so it can be accessed via inline function BUT must
 // not be declared extern elsewhere, to maintain encapsulation.
@@ -59,7 +61,6 @@ static q31_t FFTdata[2*FFT_N] = {0}; // interleaved complex, so need 2x number o
 // Associated with the sound amplitude interrupt:
 static volatile uint32_t ampl_thres = UINT32_MAX;
 static volatile bool sound_interrupt_asserted = false;
-volatile AmplitudeThresType_t ampl_thres_type = AMP_THRES_OFF;
 // counter used to ignore the max amplitude for the first N_AMP_SETTLE_PERIODS half-DMA interrupts
 // allowing the digital filter to settle.
 static volatile uint32_t amplitudeSettlingPeriods = 0;
@@ -85,7 +86,6 @@ static bool I2S1_Init(void);
 static bool startWarmupPeriod(void);
 static void TIM3_Init(void);
 static inline void clearAmpFollowerInternal(void);
-static void controlIndicatorPin(bool aboveThreshold);
 static void decodeI2SdataLch(const uint16_t inBuf[], const uint32_t inBuflen, int32_t outBuf[]);
 static void findMinMax(int32_t * min, int32_t * max, const int32_t array[], const uint32_t length);
 static uint32_t getPo2factor(uint32_t bigVal, uint32_t smallVal);
@@ -293,16 +293,16 @@ static void TIM3_Init(void) {
 	htim3.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
 	htim3.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
 	if (HAL_TIM_Base_Init(&htim3) != HAL_OK) {
-		Error_Handler();
+		errorHandler(__func__, __LINE__, __FILE__);
 	}
 	sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
 	if (HAL_TIM_ConfigClockSource(&htim3, &sClockSourceConfig) != HAL_OK) {
-		Error_Handler();
+		errorHandler(__func__, __LINE__, __FILE__);
 	}
 	sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
 	sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
 	if (HAL_TIMEx_MasterConfigSynchronization(&htim3, &sMasterConfig) != HAL_OK) {
-		Error_Handler();
+		errorHandler(__func__, __LINE__, __FILE__);
 	}
 
 	// set priority but do not enable yet - may not be used
@@ -415,74 +415,11 @@ void clearMaxAmpFollower(void) {
 	clearMaxAmpFollowerFlag = true;
 }
 
-// can set this at any time
-// if going from int mode to comparator mode, clear the pin in case it is already asserted
-// if going from either mode to OFF, clear pin
-void setAmplitudeThresholdBehaviour(AmplitudeThresType_t type) {
-	if (((ampl_thres_type == AMP_THRES_INTERRUPT)&&(type == AMP_THRES_COMPARATOR)) || (type == AMP_THRES_OFF)) {
-		deassertExternalSoundInterrupt();
-		sound_interrupt_asserted = false;
-	}
-	ampl_thres_type = type;
-}
-
 void enableSPLcalculation(bool bEnable) {
 	if (bEnable) {
 		reset_SPL_semaphore();
 	}
 	SPL_calc_enabled = bEnable;
-}
-
-bool isAmplitudeInterruptAsserted(void) {
-	return ((bool) sound_interrupt_asserted);
-}
-
-// NB: this does NOT clear the max amplitude follower value
-void clearAmplitudeInterrupt(void) {
-	if ((ampl_thres_type == AMP_THRES_INTERRUPT) ||
-	    (ampl_thres_type == AMP_THRES_OFF)) {
-		deassertExternalSoundInterrupt();
-		sound_interrupt_asserted = false;
-	}
-}
-
-// note that equal to threshold does not trigger it.
-// now changed to trigger the "Interrupt" (latch) style only on threshold crossing,
-// previously re-triggered when remaining over threshold and the user clears it.
-static void controlIndicatorPin(bool aboveThreshold) {
-	static bool previouslyAboveThreshold = false;
-	switch (ampl_thres_type) {
-		case AMP_THRES_INTERRUPT:
-			if (aboveThreshold && (!previouslyAboveThreshold)) {
-				assertExternalSoundInterrupt();
-				sound_interrupt_asserted = true;
-			}
-			previouslyAboveThreshold = aboveThreshold;
-			break;
-
-		case AMP_THRES_COMPARATOR:
-			previouslyAboveThreshold = false;
-			sound_interrupt_asserted = false; // this only applies to interrupt mode
-			if (aboveThreshold) {
-				assertExternalSoundInterrupt();
-			}
-			else {
-				deassertExternalSoundInterrupt();
-			}
-			break;
-
-		default:
-		case AMP_THRES_OFF:
-			previouslyAboveThreshold = false;
-			deassertExternalSoundInterrupt();
-			sound_interrupt_asserted = false;
-			break;
-	}
-}
-
-// call this from user code; value is in DN, not mPa
-void setAmplitudeThreshold(uint32_t ampThresDN) {
-	ampl_thres = ampThresDN;
 }
 
 // DMA buffer is half full, i.e. "HALF_BUFLEN" uint16s are in first half of dmaBuffer
@@ -506,7 +443,6 @@ void HAL_I2S_RxHalfCpltCallback(I2S_HandleTypeDef *hi2s) {
 		// use the maxAmp result to update the global follower OR to operate the interrupt
 		getFilteredMaxAmplitudeQ31((int32_t *) dataBuffer, (uint32_t) EIGHTH_BUFLEN, true, false);
 		amplitudeSettlingPeriods++;
-		controlIndicatorPin(false); // do this to reset the previouslyAboveThreshold state
 	}
 	else if (amplitudeSettlingPeriods < N_AMP_SETTLE_HALF_PERIODS) {
 		// need to allow the IIR filter to settle. Run the filter but do not
@@ -515,8 +451,7 @@ void HAL_I2S_RxHalfCpltCallback(I2S_HandleTypeDef *hi2s) {
 		amplitudeSettlingPeriods++;
 	}
 	else {
-		uint32_t maxAmp = getFilteredMaxAmplitudeQ31((int32_t *) dataBuffer, (uint32_t) EIGHTH_BUFLEN, false, true);
-		controlIndicatorPin(maxAmp > ampl_thres);
+		getFilteredMaxAmplitudeQ31((int32_t *) dataBuffer, (uint32_t) EIGHTH_BUFLEN, false, true);
 	}
 #ifdef DEBUG_AND_TESTS
 	GET_TIME_TMR15(timeA_us[2]);
@@ -565,7 +500,6 @@ void HAL_I2S_RxCpltCallback(I2S_HandleTypeDef *hi2s) {
 		// use the maxAmp result to update the global follower OR to operate the interrupt
 		getFilteredMaxAmplitudeQ31((int32_t *) dataBuffer, (uint32_t) EIGHTH_BUFLEN, true, false);
 		amplitudeSettlingPeriods++;
-		controlIndicatorPin(false); // do this to reset the previouslyAboveThreshold state
 	}
 	else if (amplitudeSettlingPeriods < N_AMP_SETTLE_HALF_PERIODS) {
 		// need to allow the IIR filter to settle. Run the filter but do not
@@ -574,8 +508,7 @@ void HAL_I2S_RxCpltCallback(I2S_HandleTypeDef *hi2s) {
 		amplitudeSettlingPeriods++;
 	}
 	else {
-		uint32_t maxAmp = getFilteredMaxAmplitudeQ31((int32_t *) dataBuffer, (uint32_t) EIGHTH_BUFLEN, false, true);
-		controlIndicatorPin(maxAmp > ampl_thres);
+		getFilteredMaxAmplitudeQ31((int32_t *) dataBuffer, (uint32_t) EIGHTH_BUFLEN, false, true);
 	}
 #ifdef DEBUG_AND_TESTS
 	GET_TIME_TMR15(timeB_us[2]);
@@ -608,7 +541,7 @@ void HAL_I2S_ErrorCallback(I2S_HandleTypeDef *hi2s) {
 #ifdef DEBUG_AND_TESTS
 	HAL_GPIO_WritePin(TEST2_OUTPUT_GPIO_Port, TEST2_OUTPUT_Pin, GPIO_PIN_SET);
 	printSerial("HAL_I2S_ErrorCallback() occurred.\n");
-	Error_Handler();
+	errorHandler(__func__, __LINE__, __FILE__);
 #else
 	//maybe reset the I2S module here?
 #endif
