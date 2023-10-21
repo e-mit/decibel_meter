@@ -945,7 +945,6 @@ static void calculateSPLfast(void) {
 	#endif
 }
 
-// if filtering, also reset the filter state
 void reset_SPL_semaphore(void) {
 #ifdef FILTER_SPL
 	spl_int_sum = 0;
@@ -1050,29 +1049,29 @@ static uint32_t getFilteredMaxAmplitudeQ31(const int32_t * data, const uint32_t 
 		filtered = 0;
 		lastData = 0;
 	}
-
 	q31_t maxAmp = 0;
 	q31_t minAmp = 0;
-	// apply a bitshift to the incoming data to maximise the dynamic range BUT while guaranteeing
-	// the intermediate value cannot overflow (three Q31 values are added together).
-	const uint32_t bitShift = 5;
-	for (uint32_t i=0; i<length; i++) {
-		q31_t fx = (q31_t) (data[i] << bitShift);
 
-		// to do D = A*B saturating:
-		// arm_mult_q31(&A,&B,&D,1);
-		// to do D = A+B saturating:
-		// arm_add_q31(&A,&B,&D,1);
+	// Apply a bitshift to the incoming data, before filtering, to maximise the dynamic range
+	// BUT while also ensuring the intermediate value cannot overflow (three Q31 values are added together).
+	const uint32_t scalingBitShift = 5;
+	for (uint32_t i = 0; i < length; i++) {
+		q31_t fx = (q31_t) (data[i] << scalingBitShift);
 
-		// now do: filtered = (a0*fx) + (a1*lastData) + (b*filtered);
+		// Arm saturating operations:
+		// D = A*B is: arm_mult_q31(&A, &B, &D, 1);
+		// D = A+B is: arm_add_q31(&A, &B, &D, 1);
+
+		// Now do the filter calculation:
+		// filtered = (a0*fx) + (a1*lastData) + (b*filtered);
 		// BUT NOTE that since a1 = -a0 this becomes:
 		// filtered = (a0*(fx - lastData)) + (b*filtered)
 		q31_t r1, r2, r3;
 		lastData = -lastData;
-		arm_add_q31(&fx,&lastData,&r1,1); // r1 = fx - lastData
-		arm_mult_q31(&a0,&r1,&r2,1);      // r2 = a0*r1
-		arm_mult_q31(&b,&filtered,&r3,1); // r3 = b*filtered
-		arm_add_q31(&r2,&r3,&filtered,1); // filtered = r2 + r3
+		arm_add_q31(&fx, &lastData, &r1, 1); // r1 = fx - lastData
+		arm_mult_q31(&a0, &r1, &r2, 1);      // r2 = a0*r1
+		arm_mult_q31(&b, &filtered, &r3, 1); // r3 = b*filtered
+		arm_add_q31(&r2, &r3, &filtered, 1); // filtered = r2 + r3
 
 		lastData = fx;
 		if (filtered > maxAmp) {
@@ -1082,22 +1081,18 @@ static uint32_t getFilteredMaxAmplitudeQ31(const int32_t * data, const uint32_t 
 			minAmp = filtered;
 		}
 	}
-	uint32_t mn = abs(minAmp);
-	uint32_t mp = (uint32_t) maxAmp;
-	uint32_t absMaxAmp = 0;
-	if (mn > mp) {
-		absMaxAmp = mn;
-	}
-	else {
-		absMaxAmp = mp;
-	}
-	uint32_t ma32 = (uint32_t) (absMaxAmp >> bitShift); // reverse the scaling bitshift
+	// Find the maximum absolute amplitude from the signed values:
+	uint32_t absMin = abs(minAmp);
+	uint32_t absMax = (uint32_t) maxAmp;
+	uint32_t absMaxAmp = (absMin > absMax) ? absMin : absMax;
 
-	if (updateMaxAmpFollower && (ma32 > maxAmp_follower)) {
-		maxAmp_follower = ma32;
-	}
+	// Reverse the scaling bitshift
+	uint32_t absMaxAmp32 = (uint32_t) (absMaxAmp >> scalingBitShift);
 
-	return ma32;
+	if (updateMaxAmpFollower && (absMaxAmp32 > maxAmp_follower)) {
+		maxAmp_follower = absMaxAmp32;
+	}
+	return absMaxAmp32;
 }
 
 
