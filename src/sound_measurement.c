@@ -1,3 +1,4 @@
+#include <sound_utilities.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include "arm_math.h"
@@ -7,7 +8,6 @@
 #include "hardware_profile.h"
 #include "sound_LUTs.h"
 #include "math.h"
-#include "utilities.h"
 
 extern void print(const char* format, ...);
 extern void errorHandler(const char * func, uint32_t line, const char * file);
