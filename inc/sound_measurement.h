@@ -7,12 +7,25 @@
 #include "project_config.h"
 #include "sensor_constants.h"
 
-#define BIT_ROUNDING_MARGIN 4
+// what to do with the sound amplitude output pin:
+typedef enum amplThresType {
+	AMP_THRES_INTERRUPT = SOUND_INT_TYPE_LATCH, // AKA latching. If amplitude exceeds threshold, pin is asserted (0V) until "interrupt" is cleared.
+	AMP_THRES_COMPARATOR = SOUND_INT_TYPE_COMP, // on every loop (with well defined time interval) pin state is set depending on current amplitude.
+	AMP_THRES_OFF       // ie. pin is released (high impedance) and value of amplitude is ignored.
+} AmplitudeThresType_t;
 
-extern volatile bool SPL_calc_complete;
-extern volatile int32_t SPL_int, SPL_frac_1dp;
+extern volatile bool sound_DMA_semaphore; // set true at end of every DMA ISR
 
-void reset_SPL_calculation_state(void);
+// this is set true by the sound module when a new SPL reading is ready. This may be after every DMA interrupt
+// OR (if filter is enabled), after every N DMA interrupts.
+// also see function reset_SPL_semaphore();
+__attribute__((always_inline)) inline bool is_SPL_calc_complete(void) {
+	extern volatile bool SPL_calc_complete;
+	// set true after every SPL calculation, which may be on every DMA ISR
+	// OR every N ISRs, depending on filter settings.
+	return (bool) SPL_calc_complete;
+}
+void reset_SPL_semaphore(void);
 
 __attribute__((always_inline)) inline bool isMicEnabled(void) {
 	extern volatile bool micEnabled;
@@ -27,6 +40,11 @@ __attribute__((always_inline)) inline bool isDMAIntEnabled(void) {
 __attribute__((always_inline)) inline bool micHasStabilized(void) {
 	extern volatile bool micStable;
 	return ((bool) micStable);// true means finished warming up
+}
+
+__attribute__((always_inline)) inline AmplitudeThresType_t getAmplThresType(void) {
+	extern volatile AmplitudeThresType_t ampl_thres_type;
+	return (AmplitudeThresType_t) ampl_thres_type;
 }
 
 #if (I2S_AUDIOFREQ == I2S_AUDIOFREQ_16K)
@@ -47,16 +65,22 @@ __attribute__((always_inline)) inline bool micHasStabilized(void) {
 // User functions:
 
 bool sound_init(void);
-bool enableMicrophone(bool bEnable);
+bool enableMic(bool bEnable);            // starts/stops I2S clock
+void pause_DMA_interrupts(bool bPause);
+void enable_I2S_DMA_interrupts(bool bEnable); // starts DMA interrupts and maxAmp following
+void enableSPLcalculation(bool bEnable);
 void clearMaxAmpFollower(void); // on next cycle, will reset the max amp follower
 
-void processHalfDMAbuffer(uint32_t halfBufferStart);
+void setAmplitudeThreshold(uint32_t ampThresDN);
+bool isAmplitudeInterruptAsserted(void); // For amp interrupt mode only, indicates whether pin is asserted.
+void clearAmplitudeInterrupt(void); // does NOT clear the max amplitude follower value
+void setAmplitudeThresholdBehaviour(AmplitudeThresType_t type); // this is also the way of enabling/disabling interrupt
 
-void getSoundDataStruct(SoundData_t * data, bool getSPLdata, bool getMaxAmpData);
-void amplitude_DN_to_mPa(const uint32_t ampDN, uint16_t * intAmp_mPa, uint8_t * frac2dpAmp_mPa);
+void getSoundDataStruct(SoundData_t * data, bool getSPLdata, bool getMaxAmpData, uint32_t * pMaxAmp_DN);
+void amplitude_DN_to_mPa(uint32_t ampDN, uint16_t * intAmp_mPa, uint8_t * frac2dpAmp_mPa);
 uint32_t amplitude_mPa_to_DN(uint16_t intAmp_mPa);
 
-#ifdef TESTS
+#ifdef DEBUG_AND_TESTS
 	#define NTIMES (4*2)
 	#define N_SPL_SAVE 250
 	extern volatile uint32_t nspl;

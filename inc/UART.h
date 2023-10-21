@@ -6,6 +6,7 @@
 #include <stdbool.h>
 
 bool UART_Init(void);
+bool LPUART1_UART_Init(void);
 bool USART4_UART_Init(void);
 void UARTprint(char * str, uint16_t len);
 

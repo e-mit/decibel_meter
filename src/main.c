@@ -17,53 +17,83 @@
 #include "sensor_constants.h"
 #include "UART.h"
 #include "utilities.h"
-#include "MS_functions.h"
 
+#ifdef DEBUG_AND_TESTS
+#ifndef HAL_UART_MODULE_ENABLED
+#error("Enabling debug and tests means that UART must be enabled also.")
+#endif
+#endif
+
+uint32_t simplified_readout(void);
+volatile bool soundDataReady = false;
 SoundData_t soundData = {0};
 
 int main(void) {
-	// Initialise the system
 	if (HAL_Init() != HAL_OK) {
-		errorHandler(__func__, __LINE__, __FILE__);
+		Error_Handler();
 	}
 	if (!SystemClock_Config()) {
-		errorHandler(__func__, __LINE__, __FILE__);
-	}
-	GPIO_Init();
-	if (!UART_Init()) {
-		errorHandler(__func__, __LINE__, __FILE__);
+		Error_Handler();
 	}
 
-	#ifdef DEBUG_PRINT
-		const char * startupReason = getStartupReason();
-		printSerial("Reset flag(s): %s\n", startupReason);
-	#endif
+	GPIO_Init();
+
+	if (!UART_Init()) {
+		Error_Handler();
+	}
 
 	if (!sound_init()) {
-		errorHandler(__func__, __LINE__, __FILE__);
+		PRINT("sound_init() failed.\n");
 	}
 
-	if (!enableMicrophone(true)) {
-		errorHandler(__func__, __LINE__, __FILE__);
+	/////////////////////////////////////
+
+	if (!enableMic(true)) {
+		return false;
 	}
+
+	enable_I2S_DMA_interrupts(true);
+	clearMaxAmpFollower();
 
 	while (true) {
 
-		while (!SPL_calc_complete) {
-			printSerial("hi\n");
+		simplified_readout();
+		if (soundDataReady) {
+			printSerial("%u.%u\n", soundData.SPL_dBA_int, soundData.SPL_dBA_fr_1dp);
+			soundDataReady = false;
 		}
-		SPL_calc_complete = false;
-		printSerial("%u.%u\n", (uint32_t) SPL_int, (uint32_t) SPL_frac_1dp);
 
-		//getSoundDataStruct(&soundData, true, true);
-		//if (true) {
-		//	printAllData(&soundData);
-		//	clearMaxAmpFollower(); // move this into function
-		//}
-
-		// Sleep until next interrupt
-		//HAL_PWR_EnterSLEEPMode(PWR_MAINREGULATOR_ON, PWR_SLEEPENTRY_WFI);
 	}
+	return 0;
+}
+
+
+uint32_t simplified_readout(void) {
+	static uint32_t stage = 0;
+
+	if (stage == 0) {
+		if (!soundDataReady) {
+			enableSPLcalculation(true); // this also resets the sound filter (if used) and clears SPL semaphore
+			stage++;
+		}
+		return 0;
+	}
+	else if (stage == 1) {
+		if (!is_SPL_calc_complete()) {
+			return 0;
+		}
+		uint32_t maxAmp_DN; // unused here
+		getSoundDataStruct(&soundData, true, true, &maxAmp_DN);
+		clearMaxAmpFollower();
+		enableSPLcalculation(false);
+		soundDataReady = true;
+		stage = 0;
+		return 0;
+	}
+
+	// reaching here is an error: reset the cycles:
+	PRINT("Cycle error: setting stage = 0.\n");
+	stage = 0; // restart as if just entering cycle mode
 	return 0;
 }
 
