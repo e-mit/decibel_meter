@@ -6,19 +6,6 @@
 #include "project_config.h"
 #include <stdbool.h>
 
-// Interrupt priorities:
-// Priority must be number 0-3; , M0+ does not use subpriorities; IRQ number breaks tie
-// Equal priority interrupts do not interrupt each other. Lower priorities interrupt higher ones.
-// If two equal-priority interrupts are pending, the IRQn breaks the tie.
-
-// NB: Systick is priority 0 with IRQn = -1
-#define DMA_IRQ_PRIORITY 2       // IRQn = 9
-
-// timer for debug process timing only:
-#define TMR15_IRQ_PRIORITY 2 // IRQn = 20
-
-///////////////////////////////////////////////////////////////////////
-
 #define AHB_CLK_DIV RCC_SYSCLK_DIV1
 #define APB1_CLK_DIV RCC_HCLK_DIV1
 

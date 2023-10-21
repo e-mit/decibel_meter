@@ -5,7 +5,7 @@
 #include "sound_measurement.h"
 #include "arm_const_structs.h"
 #include <stdbool.h>
-#include "hardware_profile.h"
+#include "stm32g0xx_hal.h"
 #include "sound_LUTs.h"
 #include "math.h"
 

@@ -1,12 +1,17 @@
 #ifndef SOUND_MEASUREMENT_H
 #define SOUND_MEASUREMENT_H
 
-#include "arm_math.h"
-#include "stm32g0xx_hal.h"
 #include <stdbool.h>
 #include "project_config.h"
 
 #define BIT_ROUNDING_MARGIN 4
+
+// Interrupt priority.
+// Priority must be a number 0-3; M0+ does not use subpriorities.
+// Equal priority interrupts do not interrupt each other. Lower priorities interrupt higher ones.
+// If two equal-priority interrupts are pending, the IRQn breaks the tie.
+// NB: Systick interrupt priority is 0 with IRQn = -1
+#define DMA_IRQ_PRIORITY 2  // IRQn = 9
 
 #if (I2S_AUDIOFREQ == I2S_AUDIOFREQ_16K)
 	#define I2S_FREQ 15625 // the actual value
