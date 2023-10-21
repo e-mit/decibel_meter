@@ -1,5 +1,3 @@
-// NOTE: was called stm32g0xx_hal_msp.c
-#include "project_config.h"
 #include "hardware_profile.h"
 #include "stm32g0xx_hal.h"
 
