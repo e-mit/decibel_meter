@@ -55,11 +55,10 @@ __attribute__((always_inline)) inline bool micHasStabilized(void) {
 // User functions:
 
 bool sound_init(void);
-bool enableMicrophone(bool bEnable);            // starts/stops I2S clock
-void pause_DMA_interrupts(bool bPause);
-void enable_I2S_DMA_interrupts(bool bEnable); // starts DMA interrupts and maxAmp following
+bool enableMicrophone(bool bEnable);
+void enable_I2S_DMA_interrupts(bool bEnable);
 void enableSPLcalculation(bool bEnable);
-void clearMaxAmpFollower(void); // on next cycle, will reset the max amp follower
+void clearMaxAmpFollower(void);
 void getSoundDataStruct(SoundData_t * data, bool getSPLdata, bool getMaxAmpData);
 void amplitude_DN_to_mPa(uint32_t ampDN, uint16_t * intAmp_mPa, uint8_t * frac2dpAmp_mPa);
 uint32_t amplitude_mPa_to_DN(uint16_t intAmp_mPa);

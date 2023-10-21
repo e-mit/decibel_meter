@@ -42,7 +42,7 @@ volatile bool micStable = false; // goes false when warmup time is complete
 static volatile int32_t SPL_int = 0, SPL_frac_1dp = 0;
 static volatile int32_t bandSPL_int[SOUND_FREQ_BANDS] = {0}, bandSPL_frac_1dp[SOUND_FREQ_BANDS] = {0};
 
-static volatile uint32_t maxAmp_follower = 0; // stores running maximum until cleared by user
+static volatile uint32_t maximumAmplitude = 0; // stores the maximum until cleared by user
 
 // other data:
 static volatile uint16_t dmaBuffer[FULL_BUFLEN] = {0}; // holds raw uint16s received from I2S module, used in 2 halves
@@ -58,7 +58,7 @@ static q31_t FFTdata[2*FFT_N] = {0}; // interleaved complex, so need 2x number o
 // allowing the digital filter to settle.
 static volatile uint32_t amplitudeSettlingPeriods = 0;
 
-// flag used to clear maxAmp_follower at appropriate moment of cycle
+// flag used to clear maximumAmplitude at appropriate moment of cycle
 static volatile bool clearMaxAmpFollowerFlag = false;
 
 #ifdef DEBUG_AND_TESTS
@@ -189,7 +189,7 @@ void getSoundDataStruct(SoundData_t * data, bool getSPLdata, bool getMaxAmpData)
 	if (getMaxAmpData) {
 		uint16_t intPart = 0;
 		uint8_t fracPart = 0;
-		amplitude_DN_to_mPa(maxAmp_follower, &intPart, &fracPart);
+		amplitude_DN_to_mPa(maximumAmplitude, &intPart, &fracPart);
 		data->peak_amp_mPa_int = intPart;
 		data->peak_amp_mPa_fr_2dp = fracPart;
 	}
@@ -230,18 +230,16 @@ static bool I2S1_Init(void) {
 // Initialize DMA but do not enable DMA interrupts.
 static void DMA_Init(void) {
 	__HAL_RCC_DMA1_CLK_ENABLE();
-
 	#if ((DMA_IRQ_PRIORITY > 3)||(DMA_IRQ_PRIORITY<0))
 		#error("Interrupt priority must be 0-3")
 	#endif
-
 	HAL_NVIC_SetPriority(DMA1_Channel1_IRQn, DMA_IRQ_PRIORITY, 0);
 }
 
 // Call this from external code to clear the maximum amplitude value.
 // It is carried out at the next DMA interrupt.
 static inline void clearAmpFollowerInternal(void) {
-	maxAmp_follower = 0;
+	maximumAmplitude = 0;
 	clearMaxAmpFollowerFlag = false;
 }
 
@@ -327,35 +325,6 @@ bool enableMicrophone(bool bEnable) {
 	return true;
 }
 
-// use this only temporarily
-void pause_DMA_interrupts(bool bPause) {
-
-	/*
-	// need memory barrier instructions here just in case DMA interrupt had already been triggered
-	// and would execute in next few cycles. NB: DMB is not needed.
-	if (bPause) {
-		NVIC_DisableIRQ(DMA1_Channel1_IRQn);
-	}
-	else {
-		NVIC_EnableIRQ(DMA1_Channel1_IRQn);
-	}
-	__DSB();
-	__ISB();
-	// At this point, know that no DMA ISR is in progress and that it will not trigger until re-enabled.
-	 * */
-
-	if (bPause) {
-		__HAL_RCC_DMA1_CLK_DISABLE();
-		NVIC_DisableIRQ(DMA1_Channel1_IRQn);
-	}
-	else {
-		__HAL_RCC_DMA1_CLK_ENABLE();
-		NVIC_EnableIRQ(DMA1_Channel1_IRQn);
-	}
-	__DSB();
-	__ISB();
-}
-
 void enable_I2S_DMA_interrupts(bool bEnable) {
 	if (bEnable == DMAintEnabled) {
 		return;
@@ -421,7 +390,7 @@ static void processHalfDMAbuffer(uint32_t halfBufferStart) {
 		// External code requested max amplitude reset
 		clearAmpFollowerInternal();
 	}
-	// Filter the amplitude, find the maximum, and update maxAmp_follower if necessary:
+	// Filter the amplitude, find the maximum, and update maximumAmplitude if necessary:
 	if (amplitudeSettlingPeriods < N_AMP_SETTLE_HALF_PERIODS) {
 		// Need to allow the IIR filter to settle
 		getFilteredMaxAmplitudeQ31((int32_t *) dataBuffer, (uint32_t) EIGHTH_BUFLEN, amplitudeSettlingPeriods == 0, false);
@@ -999,8 +968,8 @@ static uint32_t getFilteredMaxAmplitude(const int32_t data[], const uint32_t len
 		}
 	}
 	uint32_t ma32 = (uint32_t) maxAmp;
-	if (ma32 > maxAmp_follower) {
-		maxAmp_follower = ma32;
+	if (ma32 > maximumAmplitude) {
+		maximumAmplitude = ma32;
 	}
 
 	return ma32;
@@ -1076,8 +1045,8 @@ static uint32_t getFilteredMaxAmplitudeQ31(const int32_t * data, const uint32_t 
 	// Reverse the scaling bitshift
 	uint32_t absMaxAmp32 = (uint32_t) (absMaxAmp >> scalingBitShift);
 
-	if (updateMaxAmpFollower && (absMaxAmp32 > maxAmp_follower)) {
-		maxAmp_follower = absMaxAmp32;
+	if (updateMaxAmpFollower && (absMaxAmp32 > maximumAmplitude)) {
+		maximumAmplitude = absMaxAmp32;
 	}
 	return absMaxAmp32;
 }
