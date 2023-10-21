@@ -58,7 +58,7 @@ void pause_DMA_interrupts(bool bPause);
 void enable_I2S_DMA_interrupts(bool bEnable); // starts DMA interrupts and maxAmp following
 void enableSPLcalculation(bool bEnable);
 void clearMaxAmpFollower(void); // on next cycle, will reset the max amp follower
-void getSoundDataStruct(SoundData_t * data, bool getSPLdata, bool getMaxAmpData, uint32_t * pMaxAmp_DN);
+void getSoundDataStruct(SoundData_t * data, bool getSPLdata, bool getMaxAmpData);
 void amplitude_DN_to_mPa(uint32_t ampDN, uint16_t * intAmp_mPa, uint8_t * frac2dpAmp_mPa);
 uint32_t amplitude_mPa_to_DN(uint16_t intAmp_mPa);
 

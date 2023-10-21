@@ -99,18 +99,39 @@ static uint32_t getFilteredMaxAmplitudeQ31(const int32_t data[], const uint32_t 
 
 //////////////////////////////////////////////////////////////////////////////
 
-// read and copy all of the output data, during a brief period of disabled DMA interrupt.
-// internal data are never reset to zero, so will read last data if DMAint are disabled. Use the input
-// bools to prevent this and return zeros if desired.
-void getSoundDataStruct(SoundData_t * data, bool getSPLdata, bool getMaxAmpData, uint32_t * pMaxAmp_DN) {
+// Convert the accumulated SPL sum into an average value, in (integer, fractional) format.
+static void SPLsumToIntAverage(uint8_t * SPL_int, uint8_t * SPL_fr_1dp, const int32_t splIntSum,
+		                        const int32_t splFrac1dpSum, const uint32_t sumCount) {
+	float splAverage = (((float) splIntSum) +
+					   (((float) splFrac1dpSum)/10.0))/((float) sumCount);
+	uint32_t intpart = 0;
+	uint8_t fracpart1dp = 0;
+	float2IntFrac1dp(splAverage, &intpart, &fracpart1dp);
+
+	if (intpart > UINT8_MAX) {
+		// Far beyond the range of the sensor component
+		SPL_int[0] = UINT8_MAX;
+		SPL_fr_1dp[0] = 9;
+	}
+	else {
+		SPL_int[0] = (uint8_t) intpart;
+		SPL_fr_1dp[0] = (uint8_t) fracpart1dp;
+	}
+}
+
+
+// Obtain the output SoundData, during a brief period of disabled DMA interrupt.
+// The internal data are never reset to zero, so will read last data if DMAint are disabled.
+// In error cases, the output data are set to zero.
+void getSoundDataStruct(SoundData_t * data, bool getSPLdata, bool getMaxAmpData) {
 	if (DMAintEnabled) {
 		NVIC_DisableIRQ(DMA1_Channel1_IRQn);
 	}
-	// need memory barrier instructions here just in case DMA interrupt had already been triggered
-	// and would execute in next few cycles. NB: DMB is not needed.
+	// Use memory barrier instructions here, in case DMA interrupt had already been triggered
+	// and would execute in the next few cycles. NB: __DMB is not needed.
 	__DSB();
 	__ISB();
-	// At this point, know that no DMA ISR is in progress and that it will not trigger until re-enabled.
+	// At this point, we know that no DMA ISR is in progress and that it will not trigger until re-enabled.
 
 	if (getSPLdata) {
 
@@ -119,46 +140,21 @@ void getSoundDataStruct(SoundData_t * data, bool getSPLdata, bool getMaxAmpData,
 		countCopy = spl_sum_count;
 
 		if (spl_sum_count == 0) {
-			// prevent divide by zero:
+			// No data: prevent divide by zero
 			data->SPL_dBA_int = 0;
 			data->SPL_dBA_fr_1dp = 0;
-			for (uint32_t i=0; i<SOUND_FREQ_BANDS; i++) {
+			for (uint32_t i = 0; i < SOUND_FREQ_BANDS; i++) {
 				data->SPL_bands_dB_int[i] = 0;
 				data->SPL_bands_dB_fr_1dp[i] = 0;
 			}
 		}
 		else {
-			float spl = (((float) spl_int_sum) +
-					(((float) spl_frac1dp_sum)/10.0))/((float) spl_sum_count);
+			SPLsumToIntAverage(&(data->SPL_dBA_int), &(data->SPL_dBA_fr_1dp), spl_int_sum,
+					           spl_frac1dp_sum, spl_sum_count);
 
-			uint32_t intpart = 0;
-			uint8_t fracpart1dp = 0;
-			float2IntFrac1dp(spl, &intpart, &fracpart1dp);
-
-			if (intpart > UINT8_MAX) {
-				data->SPL_dBA_int = UINT8_MAX;
-				data->SPL_dBA_fr_1dp = 0;
-			}
-			else {
-				data->SPL_dBA_int = (uint8_t) intpart;
-				data->SPL_dBA_fr_1dp = (uint8_t) fracpart1dp;
-			}
-
-			for (uint32_t i=0; i<SOUND_FREQ_BANDS; i++) {
-
-				spl = (((float) band_spl_int_sum[i]) +
-						(((float) band_spl_frac1dp_sum[i])/10.0))/((float) spl_sum_count);
-
-				float2IntFrac1dp(spl, &intpart, &fracpart1dp);
-
-				if (intpart > UINT8_MAX) {
-					data->SPL_bands_dB_int[i] = UINT8_MAX;
-					data->SPL_bands_dB_fr_1dp[i] = 0;
-				}
-				else {
-					data->SPL_bands_dB_int[i] = (uint8_t) intpart;
-					data->SPL_bands_dB_fr_1dp[i] = (uint8_t) fracpart1dp;
-				}
+			for (uint32_t i = 0; i < SOUND_FREQ_BANDS; i++) {
+				SPLsumToIntAverage(&(data->SPL_bands_dB_int[i]), &(data->SPL_bands_dB_fr_1dp[i]),
+						           band_spl_int_sum[i],	band_spl_frac1dp_sum[i], spl_sum_count);
 			}
 		}
 
@@ -170,14 +166,14 @@ void getSoundDataStruct(SoundData_t * data, bool getSPLdata, bool getMaxAmpData,
 		}
 		else if (SPL_int > UINT8_MAX) {
 			data->SPL_dBA_int = UINT8_MAX;
-			data->SPL_dBA_fr_1dp = 0;
+			data->SPL_dBA_fr_1dp = 9;
 		}
 		else {
 			data->SPL_dBA_int = (uint8_t) SPL_int;
 			data->SPL_dBA_fr_1dp = (uint8_t) SPL_frac_1dp;
 		}
 
-		for (uint32_t i=0; i<SOUND_FREQ_BANDS; i++) {
+		for (uint32_t i = 0; i < SOUND_FREQ_BANDS; i++) {
 			if (bandSPL_int[i] < 0) {
 				data->SPL_bands_dB_int[i] = 0;
 				data->SPL_bands_dB_fr_1dp[i] = 0;
@@ -194,23 +190,15 @@ void getSoundDataStruct(SoundData_t * data, bool getSPLdata, bool getMaxAmpData,
 	#endif
 	}
 
-	pMaxAmp_DN[0] = 0;
 	if (getMaxAmpData) {
-		uint32_t maxAmpDN = maxAmp_follower;
-		pMaxAmp_DN[0] = maxAmp_follower;
-		uint16_t i = 0;
-		uint8_t f = 0;
-		amplitude_DN_to_mPa(maxAmpDN, &i, &f);
-		data->peak_amp_mPa_int = i;
-		data->peak_amp_mPa_fr_2dp = f;
+		uint16_t intPart = 0;
+		uint8_t fracPart = 0;
+		amplitude_DN_to_mPa(maxAmp_follower, &intPart, &fracPart);
+		data->peak_amp_mPa_int = intPart;
+		data->peak_amp_mPa_fr_2dp = fracPart;
 	}
 
-	if (micStable) {
-		data->stable = 1;
-	}
-	else {
-		data->stable = 0;
-	}
+	data->stable = micStable ? 1 : 0;
 
 	if (DMAintEnabled) {
 		NVIC_EnableIRQ(DMA1_Channel1_IRQn);

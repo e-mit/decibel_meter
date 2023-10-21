@@ -72,8 +72,7 @@ void simplified_readout(void) {
 		if (!is_SPL_calc_complete()) {
 			return;
 		}
-		uint32_t maxAmp_DN; // unused here
-		getSoundDataStruct(&soundData, true, true, &maxAmp_DN);
+		getSoundDataStruct(&soundData, true, true);
 		clearMaxAmpFollower();
 		enableSPLcalculation(false);
 		soundDataReady = true;
