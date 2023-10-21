@@ -34,12 +34,12 @@ volatile bool DMAintEnabled = false; // whether interrupts can fire
 volatile bool micStable = false; // goes false when warmup time is complete
 
 #ifdef FILTER_SPL
-static volatile int32_t spl_int_sum = 0;
-static volatile int32_t spl_frac1dp_sum = 0;
-static volatile int32_t band_spl_int_sum[SOUND_FREQ_BANDS] = {0};
-static volatile int32_t band_spl_frac1dp_sum[SOUND_FREQ_BANDS] = {0};
-static volatile uint32_t spl_sum_count = 0;
-volatile uint32_t countCopy = 0;
+	static volatile int32_t spl_int_sum = 0;
+	static volatile int32_t spl_frac1dp_sum = 0;
+	static volatile int32_t band_spl_int_sum[SOUND_FREQ_BANDS] = {0};
+	static volatile int32_t band_spl_frac1dp_sum[SOUND_FREQ_BANDS] = {0};
+	static volatile uint32_t spl_sum_count = 0;
+	volatile uint32_t countCopy = 0;
 #endif
 
 // variables as integer-fraction representation:
@@ -58,9 +58,6 @@ static TIM_HandleTypeDef htim3; // warmup timer
 // local array used as input and output to FFT:
 static q31_t FFTdata[2*FFT_N] = {0}; // interleaved complex, so need 2x number of elements.
 
-// Associated with the sound amplitude interrupt:
-static volatile uint32_t ampl_thres = UINT32_MAX;
-static volatile bool sound_interrupt_asserted = false;
 // counter used to ignore the max amplitude for the first N_AMP_SETTLE_PERIODS half-DMA interrupts
 // allowing the digital filter to settle.
 static volatile uint32_t amplitudeSettlingPeriods = 0;
@@ -1096,14 +1093,15 @@ static uint32_t getFilteredMaxAmplitudeQ31(const int32_t * data, const uint32_t 
 }
 
 
-// convert amplitude value in digital numbers to amplitude in milliPascals
-// works for peak amplitude, general amplitude, RMS amplitude.
-// returns integer and fractional part to 2 d.p.
-// Given that ampDN is at most 2^24, the output will alwyas fit in a uint16.
-void amplitude_DN_to_mPa(uint32_t ampDN, uint16_t * intAmp_mPa, uint8_t * frac2dpAmp_mPa) {
-	/* NOTE: depends on details of microphone
+// Convert an amplitude value in "DN" (digital numbers) to amplitude in milliPascals.
+// This works for peak amplitude, general amplitude, RMS amplitude.
+// Returns integer and fractional part to 2 d.p.
+// Given that ampDN is at most 2^24, the output will always fit in a uint16.
+void amplitude_DN_to_mPa(const uint32_t ampDN, uint16_t * intAmp_mPa, uint8_t * frac2dpAmp_mPa) {
+	/* NOTE: depends on the microphone sensitivity (S) and data bitdepth (N)
 	amp/Pa = (amp/DN)*ik;
-	where ik = sqrt(2)/((10^(sig/20))*((2^(NBits-1))-1)) = 3.3638e-6 Pa if sig = -26 dB
+	where ik = sqrt(2)/((10^((S/dB)/20))*((2^(N-1))-1))
+	e.g. If S = -26 dB and N = 24, then: ik = 3.3638e-3 mPa/DN
 	*/
 	const float ik_mPa = 3.3638e-3;
 	float amp = ((float) ampDN)*ik_mPa;
@@ -1112,16 +1110,15 @@ void amplitude_DN_to_mPa(uint32_t ampDN, uint16_t * intAmp_mPa, uint8_t * frac2d
 	intAmp_mPa[0] = (uint16_t) intpart;
 }
 
-// convert an integer amplitude mPa to DN
-// even the max possible input (UINT16_MAX) will not exceed the output limit (uint32)
+// Convert an integer amplitude in mPa to "DN" (digital numbers).
+// Even the maximum possible input (UINT16_MAX) will not exceed the output limit (UINT32_MAX).
 uint32_t amplitude_mPa_to_DN(uint16_t intAmp_mPa) {
-	/* NOTE: depends on details of microphone
+	/* NOTE: depends on the microphone sensitivity (S) and data bitdepth (N)
 	see also: amplitude_DN_to_mPa()
 	(amp/DN) = (amp/mPa)*iik
 	*/
 	const float iik = 297.28;
 	float amp = ((float) intAmp_mPa)*iik;
-
 	return ((uint32_t) amp);
 }
 
