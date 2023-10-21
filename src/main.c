@@ -1,20 +1,7 @@
 #include <stdbool.h>
-#include <stdio.h>
-#include <string.h>
-#include <stdarg.h>
-#include <inttypes.h>
-#include <stdlib.h>
-#include "stm32g0xx_hal.h"
 #include "hardware_profile.h"
 #include "print_functions.h"
-#include "interrupts.h"
-#include "arm_math.h"
-#include "sound_LUTs.h"
-#include "sound_test_data.h"
-#include "arm_const_structs.h"
 #include "sound_measurement.h"
-#include "math.h"
-#include "utilities.h"
 
 bool simplified_readout(void);
 SoundData_t soundData_g = {0};
