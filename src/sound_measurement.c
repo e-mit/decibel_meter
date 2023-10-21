@@ -17,6 +17,10 @@
 
 extern void printSerial(const char* format, ...);
 extern void errorHandler(const char * func, uint32_t line, const char * file);
+#ifdef DEBUG_PRINT
+    extern void printU64hex(uint64_t x);
+    #define TEST_LENGTH_SAMPLES 20
+#endif
 
 ////////////////////////////////////////////////
 
@@ -39,9 +43,6 @@ I2S_HandleTypeDef hi2s1;
 DMA_HandleTypeDef hdma_spi1_rx;
 static TIM_HandleTypeDef htim3; // warmup timer
 
-// local array used as input and output to FFT:
-static q31_t FFTdata[2*FFT_N] = {0}; // interleaved complex, so need 2x number of elements.
-
 // counter used to ignore the max amplitude for the first N_AMP_SETTLE_PERIODS half-DMA interrupts
 // allowing the digital filter to settle.
 static volatile uint32_t amplitudeSettlingPeriods = 0;
@@ -53,15 +54,6 @@ static volatile uint32_t amplitudeSettlingPeriods = 0;
 	static volatile int32_t band_spl_frac1dp_sum[SOUND_FREQ_BANDS] = {0};
 	static volatile uint32_t spl_sum_count = 0;
 	volatile uint32_t countCopy = 0;
-#endif
-
-#ifdef DEBUG_AND_TESTS
-	static volatile float32_t SPL = 0.0;
-	static volatile float32_t bandSPL[SOUND_FREQ_BANDS] = {0.0};
-	volatile uint32_t NhalfBuffersCmpltd = 0, NhalfBufLimit = 0;
-	volatile bool autoStopI2S = false;
-	volatile uint32_t nspl = 0;
-	volatile int32_t SPL_intBuf[N_SPL_SAVE] = {0}; // this will save the first N_SPL_SAVE SPL values
 #endif
 
 //////////////////////////////////////////////////////////////////////////////
@@ -90,8 +82,8 @@ volatile bool isSPLcalcComplete(void) {
 }
 
 // Convert the accumulated SPL sum into an average value, in (integer, fractional) format.
-static void SPLsumToIntAverage(uint8_t * SPL_int, uint8_t * SPL_fr_1dp, const int32_t splIntSum,
-		                        const int32_t splFrac1dpSum, const uint32_t sumCount) {
+static void SPLsumToIntAverage(uint8_t * SPL_integer, uint8_t * SPL_fractional_1dp, const int32_t splIntSum,
+		                       const int32_t splFrac1dpSum, const uint32_t sumCount) {
 	float splAverage = (((float) splIntSum) +
 					   (((float) splFrac1dpSum)/10.0))/((float) sumCount);
 	uint32_t intpart = 0;
@@ -100,12 +92,12 @@ static void SPLsumToIntAverage(uint8_t * SPL_int, uint8_t * SPL_fr_1dp, const in
 
 	if (intpart > UINT8_MAX) {
 		// Far beyond the range of the sensor component
-		SPL_int[0] = UINT8_MAX;
-		SPL_fr_1dp[0] = 9;
+		SPL_integer[0] = UINT8_MAX;
+		SPL_fractional_1dp[0] = 9;
 	}
 	else {
-		SPL_int[0] = (uint8_t) intpart;
-		SPL_fr_1dp[0] = (uint8_t) fracpart1dp;
+		SPL_integer[0] = (uint8_t) intpart;
+		SPL_fractional_1dp[0] = (uint8_t) fracpart1dp;
 	}
 }
 
@@ -413,6 +405,7 @@ static uint32_t getPo2factor(uint32_t bigVal, uint32_t smallVal) {
 // the DMA buffer, this function must complete before the next DMA interrupt.
 // This uses integers, rather than floats, for improved speed.
 static void calculateSPLfast(void) {
+	static q31_t FFTdata[2*FFT_N] = {0}; // interleaved complex, so need 2x number of elements.
 
 	// provide constants which depend on length of FFT/input sample and Fs
 	#if (I2S_FREQ == 50000)
@@ -504,24 +497,24 @@ static void calculateSPLfast(void) {
 		count += 2;
 	}
 	#ifdef DEBUG_PRINT
-		printSerial("Input: min = %i, max = %i, centre = %i, amplitude = %i, bitshift = %i\n\n\n",
+		printSerial("Input: min = %i, max = %i, centre = %i, amplitude = %u, bitshift = %u\n\n",
 				     min, max, centre, amplitude, bitShift);
-		printSerial("Scaled FFT real input\n");
+		printSerial("Scaled FFT real input:\n");
 		for (uint32_t i = 0; i < (2*TEST_LENGTH_SAMPLES); i += 2) {
 			printSerial("%i\n", FFTdata[i]);
 		}
-		printSerial("\n\n\n\n");
+		printSerial("\n");
 	#endif
 
 	// Calculate the FFT; the output is internally divided by FFT_N (number of points)
 	arm_cfft_q31(&S, FFTdata, 0, 1);
 
 	#ifdef DEBUG_PRINT
-		printSerial("Raw FFT output\n");
+		printSerial("Raw FFT output:\n");
 		for (uint32_t i = 0; i < (TEST_LENGTH_SAMPLES); i++) {
 			printSerial("%i\n", FFTdata[i]);
 		}
-		printSerial("\n\n\n\n");
+		printSerial("\n");
 	#endif
 
 	// find FFT output max, min values (in 1st half of output), ignoring the two dc bin values:
@@ -558,7 +551,7 @@ static void calculateSPLfast(void) {
 	for (uint32_t i = 1; i < (FFT_N/2); i++) {
 		sumSq += ((uint64_t) sqmag[i])*((uint64_t) sqWsc[i]);
 		if (bandIDs[i] != SOUND_FREQ_BANDS) {
-			// This FFT bin DOES belong in one of the frequency-bands:
+			// This indicates that the FFT bin does belong in one of the frequency-bands:
 			bandSum[bandIDs[i]] += (uint64_t) sqmag[i];
 		}
 	}
@@ -608,30 +601,29 @@ static void calculateSPLfast(void) {
 	#endif
 
 	#ifdef DEBUG_PRINT
-		printSerial("FFT output: max = %i, amplitude = %i, bitshift = %i\n\n\n", max, amplitude2, bitShift2);
+		printSerial("FFT output: max = %i, amplitude = %u, bitshift = %u\n\n", max, amplitude2, bitShift2);
 
 		printSerial("Scaled FFT output:\n");
 		for (uint32_t i = 0; i < TEST_LENGTH_SAMPLES; i++) {
-			printSerial("%i\n", data[i]);
+			printSerial("%i\n", FFTdata[i]);
 		}
-		printSerial("\n\n\n\n");
+		printSerial("\n");
 
 		printSerial("Squared magnitude:\n");
 		for (uint32_t i = 0; i < (TEST_LENGTH_SAMPLES/2); i++) {
 			printSerial("%i\n", sqmag[i]);
 		}
-		printSerial("\n\n\n\n");
+		printSerial("\n");
 
 		printSerial("sumSq = ");
 		printU64hex(sumSq);
-		printSerial("\n\n");
-
+		printSerial("\n");
 		for (uint32_t i = 0; i < SOUND_FREQ_BANDS; i++) {
-			printSerial("band %i sumSq = ",i);
+			printSerial("Band %i sumSq = ",i);
 			printU64hex(bandSum[i]);
+			printSerial("\n");
 		}
-		printSerial("\nbs_right = %i\n\n", bs_right);
-
+		printSerial("bs_right = %i\n\n", bs_right);
 	#endif
 }
 

@@ -35,18 +35,6 @@ void getSoundDataStruct(SoundData_t * data, bool getSPLdata, bool getMaxAmpData)
 
 //////////////////////////////////////////////////////////////////////
 
-#ifdef DEBUG_AND_TESTS
-	#define NTIMES (4*2)
-	#define N_SPL_SAVE 250
-	extern volatile uint32_t nspl;
-	extern volatile int32_t * SPL_intBuf;
-	bool soundUnitTests(void);
-	void getSoundTimeData(uint32_t * timesArray);
-	int32_t * stopI2S_afterNhalfBuffers(void);
-	extern volatile bool autoStopI2S;
-	extern volatile uint32_t NhalfBuffersCmpltd, NhalfBufLimit;
-#endif
-
 #define TMR3_RES_FREQ_KHZ 1  // sets resolution
 #define TMR3_PERIOD_MS 1500
 #define TMR3_PERIOD ((TMR3_RES_FREQ_KHZ*TMR3_PERIOD_MS)-1)

@@ -1,6 +1,16 @@
 
 
 #ifdef DEBUG_AND_TESTS
+	#define NTIMES (4*2)
+	#define N_SPL_SAVE 250
+
+	static volatile float32_t SPL = 0.0;
+	static volatile float32_t bandSPL[SOUND_FREQ_BANDS] = {0.0};
+	volatile uint32_t NhalfBuffersCmpltd = 0, NhalfBufLimit = 0;
+	volatile bool autoStopI2S = false;
+	volatile uint32_t nspl = 0;
+	volatile int32_t SPL_intBuf[N_SPL_SAVE] = {0}; // this will save the first N_SPL_SAVE SPL values
+
 
 // to get an array (FFT_N values) of amplitude data after a specific number of half-buffers have elapsed:
 // 1) MUST disable SPL_calc because this overwrites the dataBuffer array

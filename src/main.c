@@ -42,14 +42,12 @@ int main(void) {
 	}
 
 	while (true) {
-
 		if (simplified_readout()) {
 			clearMaximumAmplitude(); // Call this at any time
 			printSerial("%u.%u  %u.%02u  %u\n", soundData_g.SPL_dBA_int,
 					    soundData_g.SPL_dBA_fr_1dp, soundData_g.peak_amp_mPa_int,
 						soundData_g.peak_amp_mPa_fr_2dp, soundData_g.stable);
 		}
-
 	}
 	return 0;
 }
