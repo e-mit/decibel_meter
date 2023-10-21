@@ -68,48 +68,13 @@ extern DMA_HandleTypeDef hdma_spi1_rx;
 
 ///////////////////////////////////////////////////////////////////////
 
-// general purpose timers:
-
-// TMR15: 1us tick, up to 65.5 ms
-#define TMR15_FREQ_HZ 1000000  // sets resolution of the time measurement
-#define TMR15_PRESCALER ((SYSCLK_FREQ_HZ/TMR15_FREQ_HZ)-1)
-#define TMR15_PERIOD_COUNT 65535
-
-extern TIM_HandleTypeDef htim15;
-
-// NB: use these timers like:
-// 1) call TIM15_Init()
-// 2) start the timer with: HAL_TIM_Base_Start(&htim15) or HAL_TIM_Base_Start_IT(&htim15)
-// 3) to time a section, do:
-//    __HAL_TIM_SetCounter(&htim15,0); or RESET_TMR15_AND_FLAG
-// 4) ...bit to be timed: may need a volatile variable here...
-// 5) get the time with: uint32_t count = __HAL_TIM_GetCounter(&htim15) and can test "TIM15_flag" for overflow
-//    or, do GET_TIME_TMR15(count) and count == UINT32_MAX if timer overflowed.
-
-extern volatile bool TIM15_flag;
-
-// very small chance of a logic race in the following
-#define RESET_TMR15_AND_FLAG {TIM15_flag = false; __HAL_TIM_SetCounter(&htim15,0);}
-// The following is a more proper way of stopping the timer, clearing etc. May not work for 32 bit timers.
-#define TMR15_OFF_RESET_CLR_FLAG {__HAL_TIM_DISABLE(&htim15);\
-								  TIM15_flag = false; \
-								  __HAL_TIM_SetCounter(&htim15,0);\
-								  __HAL_TIM_ENABLE(&htim15);}
-
-#define GET_TIME_TMR15(x) {x = __HAL_TIM_GetCounter(&htim15);\
-						   if (TIM15_flag) { \
-							   x = UINT32_MAX; \
-						   }}
-
-///////////////////////////////////////////////////////////////////////
-
 // functions
 
 void GPIO_Init(void);
 void errorHandler(const char * func, uint32_t line, const char * file);
 bool SystemClock_Config(void);
-bool TIM15_Init(void);
-bool TIM15_Init_With_Period_Count(uint32_t period_count);
 const char * getStartupReason(void);
+bool UART_Init(void);
+void printString(char * str, uint16_t len);
 
 #endif

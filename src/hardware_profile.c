@@ -4,14 +4,13 @@
 #include "project_config.h"
 #include "print_functions.h"
 
-// global objects
-TIM_HandleTypeDef htim15;
-volatile bool TIM15_flag = false;
+static UART_HandleTypeDef uart;
 
+////////////////////////////////////////
 
 // Call as: errorHandler(__func__, __LINE__, __FILE__);
 void errorHandler(const char * func, uint32_t line, const char * file) {
-	printSerial("Error in %s at line %u in file: %s\n", func, line, file);
+	print("Error in %s at line %u in file: %s\n", func, line, file);
 	while (true) {
 	}
 }
@@ -103,62 +102,6 @@ bool SystemClock_Config(void) {
 	return true;
 }
 
-
-bool TIM15_Init(void) {
-	#if (TMR15_PERIOD_COUNT > 65535)
-		#error("TMR15 period must be a 16-bit number")
-	#endif
-	if (!TIM15_Init_With_Period_Count(TMR15_PERIOD_COUNT)) {
-		return false;
-	}
-	return true;
-}
-
-bool TIM15_Init_With_Period_Count(uint32_t period_count) {
-
-	if (period_count > UINT16_MAX) {
-		return false; // TMR15 period must be a 16-bit number
-	}
-
-	TIM_ClockConfigTypeDef sClockSourceConfig = {0};
-	TIM_MasterConfigTypeDef sMasterConfig = {0};
-
-	htim15.Instance = TIM15;
-	htim15.Init.Prescaler = TMR15_PRESCALER;
-	#if (TMR15_PRESCALER > 65535)
-		#error("TMR15 prescaler must be a 16-bit number")
-	#endif
-	htim15.Init.CounterMode = TIM_COUNTERMODE_UP;
-	htim15.Init.Period = period_count;
-	htim15.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
-	htim15.Init.RepetitionCounter = 0;
-	htim15.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
-	if (HAL_TIM_Base_Init(&htim15) != HAL_OK) {
-		return false;
-	}
-	sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
-	if (HAL_TIM_ConfigClockSource(&htim15, &sClockSourceConfig) != HAL_OK) {
-		return false;
-	}
-	sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
-	sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
-	if (HAL_TIMEx_MasterConfigSynchronization(&htim15, &sMasterConfig) != HAL_OK) {
-		return false;
-	}
-	// set priority but do not enable yet - may not be used
-	#if ((TMR15_IRQ_PRIORITY > 3)||(TMR15_IRQ_PRIORITY<0))
-		#error("Interrupt priority must be 0-3")
-	#endif
-	HAL_NVIC_SetPriority(TIM15_IRQn, TMR15_IRQ_PRIORITY, 0);
-
-	// Note that initialising the time base causes the UIF flag to get set. Clear it.
-	// NB: TIM_FLAG_UPDATE == TIM_SR_UIF. "Update" means rollover.
-	__HAL_TIM_CLEAR_FLAG(&htim15, TIM_SR_UIF);
-
-	return true;
-}
-
-
 const char * getStartupReason(void) {
 	const char * reason = "Unknown";
 	if (__HAL_RCC_GET_FLAG(RCC_FLAG_PWRRST) == 1) {
@@ -186,4 +129,27 @@ const char * getStartupReason(void) {
 	__HAL_RCC_CLEAR_RESET_FLAGS();
 	return reason;
 }
+
+bool UART_Init(void) {
+	uart.Instance = USART4;
+	uart.Init.BaudRate = UART_BAUD;
+	uart.Init.WordLength = UART_WORDLENGTH;
+	uart.Init.StopBits = UART_STOPBITS;
+	uart.Init.Parity = UART_PARITY;
+	uart.Init.Mode = UART_MODE_TX_RX;
+	uart.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+	uart.Init.OverSampling = UART_OVERSAMPLING_16;
+	uart.Init.OneBitSampling = UART_ONE_BIT_SAMPLE_DISABLE;
+	uart.Init.ClockPrescaler = UART_PRESCALER_DIV1;
+	uart.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_NO_INIT;
+	if (HAL_UART_Init(&uart) != HAL_OK) {
+		return false;
+	}
+	return true;
+}
+
+void printString(char * str, uint16_t len) {
+	HAL_UART_Transmit(&uart, (uint8_t*)str, len, 0xFFFF);
+}
+
 
