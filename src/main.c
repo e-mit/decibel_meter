@@ -71,7 +71,7 @@ void simplified_readout(void) {
 			return;
 		}
 		getSoundDataStruct(&soundData, true, true);
-		clearMaxAmpFollower();
+		clearMaximumAmplitude();
 		enableSPLcalculation(false);
 		soundDataReady = true;
 		stage = 0;

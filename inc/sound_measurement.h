@@ -56,9 +56,9 @@ __attribute__((always_inline)) inline bool micHasStabilized(void) {
 
 bool sound_init(void);
 bool enableMicrophone(bool bEnable);
+void clearMaximumAmplitude(void);
 void enable_I2S_DMA_interrupts(bool bEnable);
 void enableSPLcalculation(bool bEnable);
-void clearMaxAmpFollower(void);
 void getSoundDataStruct(SoundData_t * data, bool getSPLdata, bool getMaxAmpData);
 void amplitude_DN_to_mPa(uint32_t ampDN, uint16_t * intAmp_mPa, uint8_t * frac2dpAmp_mPa);
 uint32_t amplitude_mPa_to_DN(uint16_t intAmp_mPa);
@@ -67,7 +67,7 @@ uint32_t amplitude_mPa_to_DN(uint16_t intAmp_mPa);
 	#define NTIMES (4*2)
 	#define N_SPL_SAVE 250
 	extern volatile uint32_t nspl;
-	extern volatile int32_t SPL_intBuf[];
+	extern volatile int32_t * SPL_intBuf;
 	bool soundUnitTests(void);
 	void getSoundTimeData(uint32_t * timesArray);
 	int32_t * stopI2S_afterNhalfBuffers(void);
