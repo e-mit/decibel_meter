@@ -46,7 +46,8 @@ int main(void) {
 
 		simplified_readout();
 		if (soundDataReady) {
-			printSerial("%u.%u\n", soundData.SPL_dBA_int, soundData.SPL_dBA_fr_1dp);
+			printSerial("%u.%u  %u.%02u  %u\n", soundData.SPL_dBA_int, soundData.SPL_dBA_fr_1dp,
+						soundData.peak_amp_mPa_int, soundData.peak_amp_mPa_fr_2dp, soundData.stable);
 			soundDataReady = false;
 		}
 

@@ -14,10 +14,8 @@
 // NB: Systick is priority 0 with IRQn = -1
 #define DMA_IRQ_PRIORITY 2       // IRQn = 9
 
-// timers for debug process timing only:
+// timer for debug process timing only:
 #define TMR15_IRQ_PRIORITY 2 // IRQn = 20
-
-#define TMR3_IRQ_PRIORITY 3    // used for microphone warmup time. IRQn = 16
 
 ///////////////////////////////////////////////////////////////////////
 

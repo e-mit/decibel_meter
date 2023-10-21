@@ -92,7 +92,7 @@ static uint32_t getFilteredMaxAmplitudeQ31(const int32_t * data, const uint32_t 
 										   bool reset, bool updateMaxAmpFollower);
 static void scaleSPL(uint64_t sumSq, const int32_t add_int, const int32_t add_frac,
 		             int32_t * SPLintegerPart, int32_t * SPLfractionalPart);
-
+static bool micWarmupComplete(void);
 //////////////////////////////////////////////////////////////////////////////
 
 // Convert the accumulated SPL sum into an average value, in (integer, fractional) format.
@@ -194,7 +194,7 @@ void getSoundDataStruct(SoundData_t * data, bool getSPLdata, bool getMaxAmpData)
 		data->peak_amp_mPa_fr_2dp = fracPart;
 	}
 
-	data->stable = micStable ? 1 : 0;
+	data->stable = micWarmupComplete();
 
 	if (DMAintEnabled) {
 		NVIC_EnableIRQ(DMA1_Channel1_IRQn);
@@ -245,22 +245,23 @@ static inline void clearAmpFollowerInternal(void) {
 	clearMaxAmpFollowerFlag = false;
 }
 
-// Prepare and start a one-shot timer that, on expiry, sets micStable = true and then turns itself off.
-// This is provided because the microphone output is inaccurate for a short period after power-on.
-// This is advisory only: all functions still operate as normal during this period.
+// Prepare and start a one-shot timer to indicate the short time period during which the
+// microphone output is inaccurate after power-on.
+// This is output with the data for advice only: all functions still operate as normal during this period.
 static bool startWarmupPeriod(void) {
 	__HAL_TIM_SetCounter(&htim3,0);
-	if (HAL_TIM_Base_Start_IT(&htim3) != HAL_OK) {
+	if (HAL_TIM_Base_Start(&htim3) != HAL_OK) {
 		return false;
 	}
 	return true;
 }
 
-void TIM3_IRQHandler(void) {
-	micStable = true;
-	HAL_TIM_IRQHandler(&htim3);
-	HAL_TIM_Base_Stop_IT(&htim3);
-	clearMaxAmpFollower();
+bool micWarmupComplete(void) {
+	bool complete = __HAL_TIM_GET_FLAG(&htim3, TIM_SR_UIF);
+	if (complete) {
+		HAL_TIM_Base_Stop(&htim3);
+	}
+	return complete;
 }
 
 // Initialize TIMER3 but do not start it.
@@ -292,12 +293,6 @@ static bool TIM3_Init(void) {
 	if (HAL_TIMEx_MasterConfigSynchronization(&htim3, &sMasterConfig) != HAL_OK) {
 		return false;
 	}
-
-	// Set priority but do not enable yet - may not be used
-	#if ((TMR3_IRQ_PRIORITY > 3)||(TMR3_IRQ_PRIORITY<0))
-		#error("Interrupt priority must be 0-3")
-	#endif
-	HAL_NVIC_SetPriority(TIM3_IRQn, TMR3_IRQ_PRIORITY, 0);
 
 	// Initialising the time base causes the UIF flag to get set: clear it.
 	__HAL_TIM_CLEAR_FLAG(&htim3, TIM_SR_UIF);
