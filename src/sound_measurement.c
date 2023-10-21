@@ -82,6 +82,8 @@ static uint32_t getFilteredMaxAmplitudeQ31(const int32_t * data, const uint32_t 
 static void scaleSPL(uint64_t sumSq, const int32_t add_int, const int32_t add_frac,
 		             int32_t * SPLintegerPart, int32_t * SPLfractionalPart);
 static bool micWarmupComplete(void);
+static void amplitude_DN_to_mPa(uint32_t ampDN, uint16_t * intAmp_mPa, uint8_t * frac2dpAmp_mPa);
+
 //////////////////////////////////////////////////////////////////////////////
 
 // Convert the accumulated SPL sum into an average value, in (integer, fractional) format.
@@ -814,18 +816,6 @@ void amplitude_DN_to_mPa(const uint32_t ampDN, uint16_t * intAmp_mPa, uint8_t * 
 	uint32_t intpart = 0;
 	float2IntFrac2dp(amp, &intpart, frac2dpAmp_mPa);
 	intAmp_mPa[0] = (uint16_t) intpart;
-}
-
-// Convert an integer amplitude in mPa to "DN" (digital numbers).
-// Even the maximum possible input (UINT16_MAX) will not exceed the output limit (UINT32_MAX).
-uint32_t amplitude_mPa_to_DN(uint16_t intAmp_mPa) {
-	/* NOTE: depends on the microphone sensitivity (S) and data bitdepth (N)
-	see also: amplitude_DN_to_mPa()
-	(amp/DN) = (amp/mPa)*iik
-	*/
-	const float iik = 297.28;
-	float amp = ((float) intAmp_mPa)*iik;
-	return ((uint32_t) amp);
 }
 
 

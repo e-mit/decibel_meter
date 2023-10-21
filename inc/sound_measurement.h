@@ -20,22 +20,8 @@ __attribute__((always_inline)) inline bool is_SPL_calc_complete(void) {
 	// OR every N ISRs, depending on filter settings.
 	return (bool) SPL_calc_complete;
 }
+
 void reset_SPL_semaphore(void);
-
-__attribute__((always_inline)) inline bool isMicEnabled(void) {
-	extern volatile bool micEnabled;
-	return (bool) micEnabled;
-}
-
-__attribute__((always_inline)) inline bool isDMAIntEnabled(void) {
-	extern volatile bool DMAintEnabled;
-	return (bool) DMAintEnabled;
-}
-
-__attribute__((always_inline)) inline bool micHasStabilized(void) {
-	extern volatile bool micStable;
-	return ((bool) micStable);// true means finished warming up
-}
 
 #if (I2S_AUDIOFREQ == I2S_AUDIOFREQ_16K)
 	#define I2S_FREQ 15625 // the actual value
@@ -59,8 +45,6 @@ bool enableMicrophone(bool bEnable);
 void clearMaximumAmplitude(void);
 void enableSPLcalculation(bool bEnable);
 void getSoundDataStruct(SoundData_t * data, bool getSPLdata, bool getMaxAmpData);
-void amplitude_DN_to_mPa(uint32_t ampDN, uint16_t * intAmp_mPa, uint8_t * frac2dpAmp_mPa);
-uint32_t amplitude_mPa_to_DN(uint16_t intAmp_mPa);
 
 #ifdef DEBUG_AND_TESTS
 	#define NTIMES (4*2)
@@ -75,10 +59,6 @@ uint32_t amplitude_mPa_to_DN(uint16_t intAmp_mPa);
 #endif
 
 //////////////////////////////////////////////////////////////////////
-// non-user functions
-
-void DMA1_Channel1_IRQHandler(void);
-void TIM3_IRQHandler(void);
 
 #define TMR3_RES_FREQ_KHZ 1  // sets resolution
 #define TMR3_PERIOD_MS 1500
@@ -118,13 +98,6 @@ void TIM3_IRQHandler(void);
 	#endif
 #else
 	#error("N-points and/or Fs not implemented yet")
-#endif
-
-// the following can be used as timeouts; they have margin
-#ifdef FILTER_SPL
-#define EXPECTED_SPL_ACQ_PERIOD_MS SOUND_DMA_PERIOD_TIMEOUT_MS*(FILTER_SPL_N+1)
-#else
-#define EXPECTED_SPL_ACQ_PERIOD_MS SOUND_DMA_PERIOD_TIMEOUT_MS*2
 #endif
 
 extern volatile uint32_t countCopy;
