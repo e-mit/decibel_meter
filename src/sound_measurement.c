@@ -84,7 +84,7 @@ static volatile bool clearMaxAmpFollowerFlag = false;
 static void DMA_Init(void);
 static bool I2S1_Init(void);
 static bool startWarmupPeriod(void);
-static void TIM3_Init(void);
+static bool TIM3_Init(void);
 static inline void clearAmpFollowerInternal(void);
 static void decodeI2SdataLch(const uint16_t inBuf[], const uint32_t inBuflen, int32_t outBuf[]);
 static void findMinMax(int32_t * min, int32_t * max, const int32_t array[], const uint32_t length);
@@ -93,6 +93,7 @@ static uint32_t getPo2factor(uint32_t bigVal, uint32_t smallVal);
 	static uint32_t getFilteredMaxAmplitude(const int32_t data[], const uint32_t length);
 	static void calculateSPL(void);
 #endif
+static void processHalfDMAbuffer(uint32_t halfBufferStart);
 static void calculateSPLfast(void);
 static uint32_t getFilteredMaxAmplitudeQ31(const int32_t data[], const uint32_t length,
 										   bool reset, bool updateMaxAmpFollower);
@@ -412,74 +413,36 @@ void enableSPLcalculation(bool bEnable) {
 	SPL_calc_enabled = bEnable;
 }
 
-// DMA buffer is half full, i.e. "HALF_BUFLEN" uint16s are in first half of dmaBuffer
+// Called from the DMA ISR when the first half of the DMA buffer is full,
+// i.e. "HALF_BUFLEN" uint16s are in the first half of dmaBuffer
 void HAL_I2S_RxHalfCpltCallback(I2S_HandleTypeDef *hi2s) {
-	// decode raw data and copy data out of DMA buffer -> could now start refilling the DMA buffer
-	decodeI2SdataLch((uint16_t *) dmaBuffer, HALF_BUFLEN, (int32_t *) dataBuffer);
-	if (clearMaxAmpFollowerFlag) {
-		clearAmpFollowerInternal();
-	}
-	// Filter the amplitude, find the maximum, and update maxAmp_follower if necessary:
-	if (amplitudeSettlingPeriods == 0) {
-		// need to allow the IIR filter to settle. Reset the filter, run it, but do not yet
-		// use the maxAmp result to update the global follower OR to operate the interrupt
-		getFilteredMaxAmplitudeQ31((int32_t *) dataBuffer, (uint32_t) EIGHTH_BUFLEN, true, false);
-		amplitudeSettlingPeriods++;
-	}
-	else if (amplitudeSettlingPeriods < N_AMP_SETTLE_HALF_PERIODS) {
-		// need to allow the IIR filter to settle. Run the filter but do not
-		// use the maxAmp result to update the global follower OR to operate the interrupt
-		getFilteredMaxAmplitudeQ31((int32_t *) dataBuffer, (uint32_t) EIGHTH_BUFLEN, false, false);
-		amplitudeSettlingPeriods++;
-	}
-	else {
-		getFilteredMaxAmplitudeQ31((int32_t *) dataBuffer, (uint32_t) EIGHTH_BUFLEN, false, true);
-	}
-	if (SPL_calc_enabled) {
-		// calculate A-weighted SPL, octave bands SPL, update maxSPL_follower if necessary:
-		calculateSPLfast();
-		#ifdef DEBUG_AND_TESTS
-		if (nspl < N_SPL_SAVE) {
-			SPL_intBuf[nspl] = SPL_int;
-			nspl++;
-		}
-		#endif
-	}
-	#ifdef DEBUG_AND_TESTS
-		if (autoStopI2S) {
-			NhalfBuffersCmpltd++;
-			if (NhalfBuffersCmpltd >= NhalfBufLimit) {
-				enableMic(false);
-			}
-		}
-	#endif
-	sound_DMA_semaphore = true;
+	processHalfDMAbuffer(0);
 }
 
+// Called from the DMA ISR when the second half of the DMA buffer is full,
+// i.e. "HALF_BUFLEN" uint16s are in the second half of dmaBuffer
 void HAL_I2S_RxCpltCallback(I2S_HandleTypeDef *hi2s) {
-	// decode raw data and copy data out of DMA buffer -> could now start refilling the DMA buffer
-	decodeI2SdataLch((uint16_t *) &(dmaBuffer[HALF_BUFLEN]), HALF_BUFLEN, (int32_t *) dataBuffer);
+	processHalfDMAbuffer(HALF_BUFLEN);
+}
+
+static void processHalfDMAbuffer(uint32_t halfBufferStart) {
+	// Decode the raw I2S data and copy it out of the DMA buffer and into dataBuffer
+	decodeI2SdataLch((uint16_t *) &(dmaBuffer[halfBufferStart]), HALF_BUFLEN, (int32_t *) dataBuffer);
 	if (clearMaxAmpFollowerFlag) {
+		// External code requested max amplitude reset
 		clearAmpFollowerInternal();
 	}
 	// Filter the amplitude, find the maximum, and update maxAmp_follower if necessary:
-	if (amplitudeSettlingPeriods == 0) {
-		// need to allow the IIR filter to settle. Reset the filter, run it, but do not
-		// use the maxAmp result to update the global follower OR to operate the interrupt
-		getFilteredMaxAmplitudeQ31((int32_t *) dataBuffer, (uint32_t) EIGHTH_BUFLEN, true, false);
-		amplitudeSettlingPeriods++;
-	}
-	else if (amplitudeSettlingPeriods < N_AMP_SETTLE_HALF_PERIODS) {
-		// need to allow the IIR filter to settle. Run the filter but do not
-		// use the maxAmp result to update the global follower OR to operate the interrupt
-		getFilteredMaxAmplitudeQ31((int32_t *) dataBuffer, (uint32_t) EIGHTH_BUFLEN, false, false);
+	if (amplitudeSettlingPeriods < N_AMP_SETTLE_HALF_PERIODS) {
+		// Need to allow the IIR filter to settle
+		getFilteredMaxAmplitudeQ31((int32_t *) dataBuffer, (uint32_t) EIGHTH_BUFLEN, amplitudeSettlingPeriods == 0, false);
 		amplitudeSettlingPeriods++;
 	}
 	else {
 		getFilteredMaxAmplitudeQ31((int32_t *) dataBuffer, (uint32_t) EIGHTH_BUFLEN, false, true);
 	}
 	if (SPL_calc_enabled) {
-		// calculate A-weighted SPL, octave bands SPL, update maxSPL_follower if necessary:
+		// Calculate the A-weighted SPL and octave bands SPL		
 		calculateSPLfast();
 		#ifdef DEBUG_AND_TESTS
 		if (nspl < N_SPL_SAVE) {
@@ -503,10 +466,11 @@ void HAL_I2S_ErrorCallback(I2S_HandleTypeDef *hi2s) {
 	errorHandler(__func__, __LINE__, __FILE__);
 }
 
+// Find smallest and largest ints in array
 static void findMinMax(int32_t * min, int32_t * max, const int32_t array[], const uint32_t length) {
 	max[0] = INT32_MIN;
 	min[0] = INT32_MAX;
-	for (uint32_t i = 0; i<length; i++) {
+	for (uint32_t i = 0; i < length; i++) {
 		if (array[i] < min[0]) {
 			min[0] = array[i];
 		}
