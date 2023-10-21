@@ -110,5 +110,6 @@ void errorHandler(const char * func, uint32_t line, const char * file);
 bool SystemClock_Config(void);
 bool TIM15_Init(void);
 bool TIM15_Init_With_Period_Count(uint32_t period_count);
+const char * getStartupReason(void);
 
 #endif

@@ -33,6 +33,11 @@ int main(void) {
 		errorHandler(__func__, __LINE__, __FILE__);
 	}
 
+	#ifdef DEBUG_PRINT
+	const char * startupReason = getStartupReason();
+	serialPrint("Restart reason: %s\n", startupReason);
+	#endif
+
 	if (!sound_init()) {
 		errorHandler(__func__, __LINE__, __FILE__);
 	}
