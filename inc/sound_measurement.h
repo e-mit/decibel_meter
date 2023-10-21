@@ -9,20 +9,6 @@
 
 #define BIT_ROUNDING_MARGIN 4
 
-extern volatile bool sound_DMA_semaphore; // set true at end of every DMA ISR
-
-// this is set true by the sound module when a new SPL reading is ready. This may be after every DMA interrupt
-// OR (if filter is enabled), after every N DMA interrupts.
-// also see function reset_SPL_semaphore();
-__attribute__((always_inline)) inline bool is_SPL_calc_complete(void) {
-	extern volatile bool SPL_calc_complete;
-	// set true after every SPL calculation, which may be on every DMA ISR
-	// OR every N ISRs, depending on filter settings.
-	return (bool) SPL_calc_complete;
-}
-
-void reset_SPL_semaphore(void);
-
 #if (I2S_AUDIOFREQ == I2S_AUDIOFREQ_16K)
 	#define I2S_FREQ 15625 // the actual value
 #elif (I2S_AUDIOFREQ == I2S_AUDIOFREQ_32K)
@@ -44,6 +30,7 @@ bool sound_init(void);
 bool enableMicrophone(bool bEnable);
 void clearMaximumAmplitude(void);
 void enableSPLcalculation(bool bEnable);
+volatile bool isSPLcalcComplete(void);
 void getSoundDataStruct(SoundData_t * data, bool getSPLdata, bool getMaxAmpData);
 
 //////////////////////////////////////////////////////////////////////
@@ -73,33 +60,25 @@ void getSoundDataStruct(SoundData_t * data, bool getSPLdata, bool getMaxAmpData)
 #if (I2S_FREQ == 31250)
 	#if (FFT_N == 256)
 		#define N_AMP_SETTLE_HALF_PERIODS 10
-		#define SOUND_DMA_PERIOD_TIMEOUT_MS 10
 	#elif (FFT_N == 512)
 		#define N_AMP_SETTLE_HALF_PERIODS 5
-		#define SOUND_DMA_PERIOD_TIMEOUT_MS 20
 	#elif (FFT_N == 1024)
 		#define N_AMP_SETTLE_HALF_PERIODS 3
-		#define SOUND_DMA_PERIOD_TIMEOUT_MS 40
 	#else
 		#error("N-points and/or Fs not implemented yet")
 	#endif
 #elif (I2S_FREQ == 15625)
 	#if (FFT_N == 128)
 		#define N_AMP_SETTLE_HALF_PERIODS 10
-		#define SOUND_DMA_PERIOD_TIMEOUT_MS 12
 	#elif (FFT_N == 256)
 		#define N_AMP_SETTLE_HALF_PERIODS 5
-		#define SOUND_DMA_PERIOD_TIMEOUT_MS 24
 	#elif (FFT_N == 512)
 		#define N_AMP_SETTLE_HALF_PERIODS 3
-		#define SOUND_DMA_PERIOD_TIMEOUT_MS 48
 	#else
 		#error("N-points and/or Fs not implemented yet")
 	#endif
 #else
 	#error("N-points and/or Fs not implemented yet")
 #endif
-
-extern volatile uint32_t countCopy;
 
 #endif

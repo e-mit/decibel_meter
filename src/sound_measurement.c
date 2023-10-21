@@ -18,24 +18,13 @@
 extern void printSerial(const char* format, ...);
 extern void errorHandler(const char * func, uint32_t line, const char * file);
 
-volatile bool sound_DMA_semaphore = false; // set true at end of every DMA ISR
-volatile bool SPL_calc_complete = true; // set true after every SPL calculation, which may be on every DMA ISR
-										// OR every N ISRs, depending on filter settings.
-
 ////////////////////////////////////////////////
 
-// private state variables (static or read through inline func):
+// state variables:
 static volatile bool SPL_calc_enabled = false;
 volatile bool DMAintEnabled = false; // whether interrupts can fire
-
-#ifdef FILTER_SPL
-	static volatile int32_t spl_int_sum = 0;
-	static volatile int32_t spl_frac1dp_sum = 0;
-	static volatile int32_t band_spl_int_sum[SOUND_FREQ_BANDS] = {0};
-	static volatile int32_t band_spl_frac1dp_sum[SOUND_FREQ_BANDS] = {0};
-	static volatile uint32_t spl_sum_count = 0;
-	volatile uint32_t countCopy = 0;
-#endif
+static volatile bool SPL_calc_complete = false; // set true after every SPL calculation, which may be on
+										        // every DMA ISR OR every N ISRs, depending on filter settings.
 
 // variables as integer-fraction representation:
 static volatile int32_t SPL_int = 0, SPL_frac_1dp = 0;
@@ -56,6 +45,15 @@ static q31_t FFTdata[2*FFT_N] = {0}; // interleaved complex, so need 2x number o
 // counter used to ignore the max amplitude for the first N_AMP_SETTLE_PERIODS half-DMA interrupts
 // allowing the digital filter to settle.
 static volatile uint32_t amplitudeSettlingPeriods = 0;
+
+#ifdef FILTER_SPL
+	static volatile int32_t spl_int_sum = 0;
+	static volatile int32_t spl_frac1dp_sum = 0;
+	static volatile int32_t band_spl_int_sum[SOUND_FREQ_BANDS] = {0};
+	static volatile int32_t band_spl_frac1dp_sum[SOUND_FREQ_BANDS] = {0};
+	static volatile uint32_t spl_sum_count = 0;
+	volatile uint32_t countCopy = 0;
+#endif
 
 #ifdef DEBUG_AND_TESTS
 	static volatile float32_t SPL = 0.0;
@@ -83,8 +81,13 @@ static void scaleSPL(uint64_t sumSq, const int32_t add_int, const int32_t add_fr
 		             int32_t * SPLintegerPart, int32_t * SPLfractionalPart);
 static bool micWarmupComplete(void);
 static void amplitude_DN_to_mPa(uint32_t ampDN, uint16_t * intAmp_mPa, uint8_t * frac2dpAmp_mPa);
+static void reset_SPL_state(void);
 
 //////////////////////////////////////////////////////////////////////////////
+
+volatile bool isSPLcalcComplete(void) {
+	return SPL_calc_complete;
+}
 
 // Convert the accumulated SPL sum into an average value, in (integer, fractional) format.
 static void SPLsumToIntAverage(uint8_t * SPL_int, uint8_t * SPL_fr_1dp, const int32_t splIntSum,
@@ -335,7 +338,7 @@ static void decodeI2SdataLch(const uint16_t * inBuf, const uint32_t inBuflen, in
 
 void enableSPLcalculation(bool bEnable) {
 	if (bEnable) {
-		reset_SPL_semaphore();
+		reset_SPL_state();
 	}
 	SPL_calc_enabled = bEnable;
 }
@@ -367,7 +370,6 @@ static void processHalfDMAbuffer(uint32_t halfBufferStart) {
 		// Calculate the A-weighted SPL and octave bands SPL
 		calculateSPLfast();
 	}
-	sound_DMA_semaphore = true;
 }
 
 void HAL_I2S_ErrorCallback(I2S_HandleTypeDef *hi2s) {
@@ -588,23 +590,21 @@ static void calculateSPLfast(void) {
 	}
 
 	#ifdef FILTER_SPL
-		if (!SPL_calc_complete) {
-			spl_int_sum += SPL_int;
-			spl_frac1dp_sum += SPL_frac_1dp;
+		spl_int_sum += SPL_int;
+		spl_frac1dp_sum += SPL_frac_1dp;
 
-			for (uint32_t i = 0; i < SOUND_FREQ_BANDS; i++) {
-				band_spl_int_sum[i] += bandSPL_int[i];
-				band_spl_frac1dp_sum[i] += bandSPL_frac_1dp[i];
-			}
+		for (uint32_t i = 0; i < SOUND_FREQ_BANDS; i++) {
+			band_spl_int_sum[i] += bandSPL_int[i];
+			band_spl_frac1dp_sum[i] += bandSPL_frac_1dp[i];
+		}
 
 		spl_sum_count++;
 		if (spl_sum_count >= FILTER_SPL_N) {
 			SPL_calc_complete = true;
 			SPL_calc_enabled = false;
 		}
-	}
 	#else
-	SPL_calc_complete = true;
+		SPL_calc_complete = true;
 	#endif
 
 	#ifdef DEBUG_PRINT
@@ -635,17 +635,15 @@ static void calculateSPLfast(void) {
 	#endif
 }
 
-void reset_SPL_semaphore(void) {
+static void reset_SPL_state(void) {
 	#ifdef FILTER_SPL
 		spl_int_sum = 0;
 		spl_frac1dp_sum = 0;
-
+		spl_sum_count = 0;
 		for (uint32_t i=0; i<SOUND_FREQ_BANDS; i++) {
 			band_spl_int_sum[i] = 0;
 			band_spl_frac1dp_sum[i] = 0;
 		}
-
-		spl_sum_count = 0;
 	#endif
 	SPL_calc_complete = false;
 }

@@ -18,9 +18,8 @@
 #include "UART.h"
 #include "utilities.h"
 
-void simplified_readout(void);
-volatile bool soundDataReady = false;
-SoundData_t soundData = {0};
+bool simplified_readout(void);
+SoundData_t soundData_g = {0};
 
 int main(void) {
 	if (HAL_Init() != HAL_OK) {
@@ -44,42 +43,39 @@ int main(void) {
 
 	while (true) {
 
-		simplified_readout();
-		if (soundDataReady) {
-			printSerial("%u.%u  %u.%02u  %u\n", soundData.SPL_dBA_int, soundData.SPL_dBA_fr_1dp,
-						soundData.peak_amp_mPa_int, soundData.peak_amp_mPa_fr_2dp, soundData.stable);
-			soundDataReady = false;
+		if (simplified_readout()) {
+			clearMaximumAmplitude(); // Call this at any time
+			printSerial("%u.%u  %u.%02u  %u\n", soundData_g.SPL_dBA_int,
+					    soundData_g.SPL_dBA_fr_1dp, soundData_g.peak_amp_mPa_int,
+						soundData_g.peak_amp_mPa_fr_2dp, soundData_g.stable);
 		}
 
 	}
 	return 0;
 }
 
-
-void simplified_readout(void) {
+// Return bool: new data available
+bool simplified_readout(void) {
 	static uint32_t stage = 0;
 
 	if (stage == 0) {
-		if (!soundDataReady) {
-			enableSPLcalculation(true); // this also resets the sound filter (if used) and clears SPL semaphore
-			stage++;
-		}
-		return;
+		enableSPLcalculation(true); // start a new acquisition/calculation
+		stage++;
+		return false;
 	}
 	else if (stage == 1) {
-		if (!is_SPL_calc_complete()) {
-			return;
+		if (!isSPLcalcComplete()) {
+			return false;
 		}
-		getSoundDataStruct(&soundData, true, true);
-		clearMaximumAmplitude();
-		enableSPLcalculation(false);
-		soundDataReady = true;
+		// Acquisition/calculation complete: get data
+		getSoundDataStruct(&soundData_g, true, true);
+		enableSPLcalculation(false); // reset the calculation, ready for restart
 		stage = 0;
-		return;
+		return true;
 	}
 
 	errorHandler(__func__, __LINE__, __FILE__);
 	stage = 0;
-	return;
+	return false;
 }
 
