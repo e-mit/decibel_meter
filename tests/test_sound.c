@@ -36,8 +36,8 @@ bool soundUnitTests(void) {
 
 	bool testsOK = true, ok = true;
 
-	printSerial("\nSound unit tests on %s for %s\n",__DATE__,__FILE__);
-	printSerial("FFT_N = %u, I2S_FREQ = %u\n\n",FFT_N, I2S_FREQ);
+	print("\nSound unit tests on %s for %s\n",__DATE__,__FILE__);
+	print("FFT_N = %u, I2S_FREQ = %u\n\n",FFT_N, I2S_FREQ);
 
 	// decodeI2SdataLch: convert input raw I2S data into signed 32 bit numbers, assuming the I2S data is Left
 	// channel only and the first datum starts at element 0.
@@ -55,10 +55,10 @@ bool soundUnitTests(void) {
 	decodeI2SdataLch(inBuf, inBuflen, outBuf);
 	ok = true;
 	for (uint32_t i=0; i<nsamp; i++) {
-		//printSerial("EXP: %i, OBT: %i\n",outBufExpected[i], outBuf[i]);
+		//print("EXP: %i, OBT: %i\n",outBufExpected[i], outBuf[i]);
 		ok = ok && (outBufExpected[i] == outBuf[i]);
 	}
-	printSerial("decodeI2SdataLch: %s\n\n", PASSFAIL_STR(ok));
+	print("decodeI2SdataLch: %s\n\n", PASSFAIL_STR(ok));
 	testsOK = testsOK && ok;
 
 	/////////////////////////////////////////////////////////////////////////////
@@ -74,7 +74,7 @@ bool soundUnitTests(void) {
 	ok = true;
 	ok = ok && (max == maxExpected);
 	ok = ok && (min == minExpected);
-	printSerial("findMinMax: %s\n\n", PASSFAIL_STR(ok));
+	print("findMinMax: %s\n\n", PASSFAIL_STR(ok));
 	testsOK = testsOK && ok;
 
 	/////////////////////////////////////////////////////////////////////////////
@@ -91,7 +91,7 @@ bool soundUnitTests(void) {
 	ok = ok && (getPo2factor(16, 0) == 0);
 	ok = ok && (getPo2factor(2,  2) == 0);
 	ok = ok && (getPo2factor(24, 3) == 3);
-	printSerial("getPo2factor: %s\n\n", PASSFAIL_STR(ok));
+	print("getPo2factor: %s\n\n", PASSFAIL_STR(ok));
 	testsOK = testsOK && ok;
 
 	/////////////////////////////////////////////////////////////////////////////
@@ -121,11 +121,11 @@ bool soundUnitTests(void) {
 	RESET_TMR15_AND_FLAG;
 	volatile uint32_t filtmax = getFilteredMaxAmplitude(&(x1_32[X1_32_LEN - NFILT]), NFILT);
 	GET_TIME_TMR15(time_us);
-	printSerial("Time for filtering (float) is: %u us\n",time_us);
+	print("Time for filtering (float) is: %u us\n",time_us);
 	pcDiff = (100.0*(((float) filtmax) - max_filt_expected))/max_filt_expected;
-	printSerial("Percentage difference (float) = %.2f%%\n",pcDiff);
+	print("Percentage difference (float) = %.2f%%\n",pcDiff);
 	ok = ((pcDiff < PC_DIFF_LIMIT)&&(pcDiff > -PC_DIFF_LIMIT));
-	printSerial("getFilteredMaxAmplitude: %s\n\n", PASSFAIL_STR(ok));
+	print("getFilteredMaxAmplitude: %s\n\n", PASSFAIL_STR(ok));
 	testsOK = testsOK && ok;
 
 	// now do Q31 version
@@ -134,11 +134,11 @@ bool soundUnitTests(void) {
 	RESET_TMR15_AND_FLAG;
 	filtmax = getFilteredMaxAmplitudeQ31(&(x1_32[X1_32_LEN - NFILT]), NFILT, false, true);
 	GET_TIME_TMR15(time_us);
-	printSerial("Time for filtering (Q31) is: %u us\n",time_us);
+	print("Time for filtering (Q31) is: %u us\n",time_us);
 	pcDiff = (100.0*(((float) filtmax) - max_filt_expected))/max_filt_expected;
-	printSerial("Percentage difference (Q31) = %.2f%%\n",pcDiff);
+	print("Percentage difference (Q31) = %.2f%%\n",pcDiff);
 	ok = ((pcDiff < PC_DIFF_LIMIT)&&(pcDiff > -PC_DIFF_LIMIT));
-	printSerial("getFilteredMaxAmplitudeQ31: %s\n\n", PASSFAIL_STR(ok));
+	print("getFilteredMaxAmplitudeQ31: %s\n\n", PASSFAIL_STR(ok));
 	testsOK = testsOK && ok;
 
 	/////////////////////////////////////////////////////////////////////////////
@@ -189,7 +189,7 @@ bool soundUnitTests(void) {
 	#error("N-points and/or Fs not implemented yet")
 #endif
 
-	printSerial("calculateSPL() test\n");
+	print("calculateSPL() test\n");
 
 	memcpy((int32_t *) &dataBuffer, &x1_32, 4*FFT_N); // 3rd arg is #bytes
 
@@ -199,19 +199,19 @@ bool soundUnitTests(void) {
 	// convert the result to 1.d.p for a fair test:
 	SPL = roundf(SPL*10.0)/10.0;
 
-	printSerial("	Time taken for SPL calc is: %u us\n",time_us);
-	printSerial("	SPL abs difference = %.2f\n",SPL - SPL_expected);
+	print("	Time taken for SPL calc is: %u us\n",time_us);
+	print("	SPL abs difference = %.2f\n",SPL - SPL_expected);
 
 	for (uint32_t i = 0; i<SOUND_FREQ_BANDS; i++) {
 		// convert the result to 1.d.p for a fair test:
 		bandSPL[i] = roundf(bandSPL[i]*10.0)/10.0;
-		printSerial("	Band %i abs difference = %.2f\n",i,bandSPL[i] - bandSPL_expected[i]);
+		print("	Band %i abs difference = %.2f\n",i,bandSPL[i] - bandSPL_expected[i]);
 	}
-	printSerial("\n");
+	print("\n");
 
 	////////////////////////////
 
-	printSerial("calculateSPLQ31() test\n");
+	print("calculateSPLQ31() test\n");
 
 	memcpy((int32_t *) &dataBuffer, &x1_32, 4*FFT_N); // 3rd arg is #bytes
 
@@ -221,16 +221,16 @@ bool soundUnitTests(void) {
 
 	float theSPL = ((float) SPL_int) + (((float) SPL_frac_1dp)/10.0);
 
-	printSerial("	Time taken for SPL calc is: %u us\n",time_us);
-	printSerial("	SPL abs difference = %.2f\n",theSPL - SPL_expected);
+	print("	Time taken for SPL calc is: %u us\n",time_us);
+	print("	SPL abs difference = %.2f\n",theSPL - SPL_expected);
 
 	for (uint32_t i = 0; i<SOUND_FREQ_BANDS; i++) {
 		theSPL = ((float) bandSPL_int[i]) + (((float) bandSPL_frac_1dp[i])/10.0);
-		//printSerial("	Band %i SPL = %i.%i = %.1fF, expected: %.1f\n",
+		//print("	Band %i SPL = %i.%i = %.1fF, expected: %.1f\n",
 		//		i,bandSPL_int[i],bandSPL_frac_1dp[i],theSPL,bandSPL_expected[i]);
-		printSerial("	Band %i abs difference = %.2f\n",i,theSPL - bandSPL_expected[i]);
+		print("	Band %i abs difference = %.2f\n",i,theSPL - bandSPL_expected[i]);
 	}
-	printSerial("\n");
+	print("\n");
 
 	/////////////////////////////////////////////////////////////////////////////
 
@@ -243,11 +243,11 @@ bool soundUnitTests(void) {
 		volatile float ans = log10(input[i]);
 		GET_TIME_TMR15(time_us);
 		pcDiff = (100.0*(ans - exp_ans[i]))/exp_ans[i];
-		printSerial("log10() percentage difference = %.2f%%\n",pcDiff);
-		printSerial("Time for log10(): %u us\n",time_us);
+		print("log10() percentage difference = %.2f%%\n",pcDiff);
+		print("Time for log10(): %u us\n",time_us);
 	}
 
-	printSerial("\n");
+	print("\n");
 	volatile float A = 3.141592e2;
 	volatile float B = 29.762e10;
 	volatile bool comp = false;
@@ -257,55 +257,55 @@ bool soundUnitTests(void) {
 	}
 	GET_TIME_TMR15(time_us);
 	if (!comp) {
-		printSerial("Float compare FAILED\n");
+		print("Float compare FAILED\n");
 	}
 	else {
-		printSerial("Time for a float compare: %u us\n",time_us);
+		print("Time for a float compare: %u us\n",time_us);
 	}
 
-	printSerial("\n");
+	print("\n");
 	volatile float C = 7.141592e2;
 	volatile float exp_ACans = 1028.3184;
 	RESET_TMR15_AND_FLAG;
 	volatile float ACans = A+C;
 	GET_TIME_TMR15(time_us);
 	pcDiff = (100.0*(ACans - exp_ACans))/exp_ACans;
-	printSerial("Float addition percentage difference = %.2f%%\n",pcDiff);
-	printSerial("Time for a float addition: %u us\n",time_us);
+	print("Float addition percentage difference = %.2f%%\n",pcDiff);
+	print("Time for a float addition: %u us\n",time_us);
 
-	printSerial("\n");
+	print("\n");
 	volatile float exp_AmCans = 224359.6829;
 	RESET_TMR15_AND_FLAG;
 	volatile float AmCans = A*C;
 	GET_TIME_TMR15(time_us);
 	pcDiff = (100.0*(AmCans - exp_AmCans))/exp_AmCans;
-	printSerial("Float multiplication percentage difference = %.2f%%\n",pcDiff);
-	printSerial("Time for a float multiplication: %u us\n",time_us);
+	print("Float multiplication percentage difference = %.2f%%\n",pcDiff);
+	print("Time for a float multiplication: %u us\n",time_us);
 
-	printSerial("\n");
+	print("\n");
 	volatile float exp_CdAans = 2.27323981;
 	RESET_TMR15_AND_FLAG;
 	volatile float CdAans = C/A;
 	GET_TIME_TMR15(time_us);
 	pcDiff = (100.0*(CdAans - exp_CdAans))/exp_CdAans;
-	printSerial("Float division percentage difference = %.2f%%\n",pcDiff);
-	printSerial("Time for a float division: %u us\n",time_us);
+	print("Float division percentage difference = %.2f%%\n",pcDiff);
+	print("Time for a float division: %u us\n",time_us);
 
-	printSerial("\n");
+	print("\n");
 	volatile uint64_t u64 = UINT64_C(0x40A0900F04004000);
 	RESET_TMR15_AND_FLAG;
 	volatile float u64f = (float) u64;
 	GET_TIME_TMR15(time_us);
 	u64f+=1.0; // just so it is used
-	printSerial("Time for a u64->float cast: %u us\n",time_us);
+	print("Time for a u64->float cast: %u us\n",time_us);
 
 	/////////////////////////////////////////////////////////////////////////////
 
 	// efficient 10log10
 	// NB: GCC compiler memory barrier is:   asm volatile("" ::: "memory");
 
-	printSerial("\n");
-	printSerial("efficient_10log10() tests\n");
+	print("\n");
+	print("efficient_10log10() tests\n");
 
 	volatile int32_t integerPart, fractionalPart;
 
@@ -313,87 +313,87 @@ bool soundUnitTests(void) {
 		RESET_TMR15_AND_FLAG;
 		efficient_10log10(testInputs[i], (int32_t *) &integerPart, (int32_t *) &fractionalPart);
 		GET_TIME_TMR15(time_us);
-		printSerial("efficient_10log10() ran in = %u us\n",time_us);
+		print("efficient_10log10() ran in = %u us\n",time_us);
 		float result = ((float) integerPart) + (((float) fractionalPart)/10.0);
 		float absErr = result - testTrueOutputs[i];
-		printSerial("                    absErr = %.2f\n",absErr);
+		print("                    absErr = %.2f\n",absErr);
 
 		RESET_TMR15_AND_FLAG;
 		volFloat = 10.0*log10((float) testInputs[i]);
 		GET_TIME_TMR15(time_us);
-		printSerial("float version ran in = %u us\n",time_us);
+		print("float version ran in = %u us\n",time_us);
 		// convert the result to 1.d.p for a fair test:
 		volFloat = roundf(volFloat*10.0)/10.0;
-		printSerial("        float absErr = %.2f\n",volFloat - testTrueOutputs[i]);
+		print("        float absErr = %.2f\n",volFloat - testTrueOutputs[i]);
 	}
 
-	printSerial("\n");
+	print("\n");
 
 	///////////////////////////////////////////////////////
 
-	printSerial("correctIntFracNumber() tests:\n");
+	print("correctIntFracNumber() tests:\n");
 
 	ok = true;
 	integerPart = 0;
 	fractionalPart = 2;
-	printSerial("%i,%i gives: ",integerPart,fractionalPart);
+	print("%i,%i gives: ",integerPart,fractionalPart);
 	correctIntFracNumber((int32_t *) &integerPart, (int32_t *) &fractionalPart);
-	printSerial("%i.%i\n",integerPart,fractionalPart);
+	print("%i.%i\n",integerPart,fractionalPart);
 	ok = ok && (integerPart == 0) && (fractionalPart == 2);
 
 	integerPart = -7;
 	fractionalPart = -5;
-	printSerial("%i,%i gives: ",integerPart,fractionalPart);
+	print("%i,%i gives: ",integerPart,fractionalPart);
 	correctIntFracNumber((int32_t *) &integerPart, (int32_t *) &fractionalPart);
-	printSerial("%i.%i\n",integerPart,fractionalPart);
+	print("%i.%i\n",integerPart,fractionalPart);
 	ok = ok && (integerPart == -7) && (fractionalPart == -5);
 
 	integerPart = 3;
 	fractionalPart = 4;
-	printSerial("%i,%i gives: ",integerPart,fractionalPart);
+	print("%i,%i gives: ",integerPart,fractionalPart);
 	correctIntFracNumber((int32_t *) &integerPart, (int32_t *) &fractionalPart);
-	printSerial("%i.%i\n",integerPart,fractionalPart);
+	print("%i.%i\n",integerPart,fractionalPart);
 	ok = ok && (integerPart == 3) && (fractionalPart == 4);
 
 	integerPart = 2;
 	fractionalPart = 12;
-	printSerial("%i,%i gives: ",integerPart,fractionalPart);
+	print("%i,%i gives: ",integerPart,fractionalPart);
 	correctIntFracNumber((int32_t *) &integerPart, (int32_t *) &fractionalPart);
-	printSerial("%i.%i\n",integerPart,fractionalPart);
+	print("%i.%i\n",integerPart,fractionalPart);
 	ok = ok && (integerPart == 3) && (fractionalPart == 2);
 
 	integerPart = -2;
 	fractionalPart = -21;
-	printSerial("%i,%i gives: ",integerPart,fractionalPart);
+	print("%i,%i gives: ",integerPart,fractionalPart);
 	correctIntFracNumber((int32_t *) &integerPart, (int32_t *) &fractionalPart);
-	printSerial("%i.%i\n",integerPart,fractionalPart);
+	print("%i.%i\n",integerPart,fractionalPart);
 	ok = ok && (integerPart == -4) && (fractionalPart == -1);
 
 	integerPart = 2;
 	fractionalPart = -6;
-	printSerial("%i,%i gives: ",integerPart,fractionalPart);
+	print("%i,%i gives: ",integerPart,fractionalPart);
 	correctIntFracNumber((int32_t *) &integerPart, (int32_t *) &fractionalPart);
-	printSerial("%i.%i\n",integerPart,fractionalPart);
+	print("%i.%i\n",integerPart,fractionalPart);
 	ok = ok && (integerPart == 1) && (fractionalPart == 4);
 
 	integerPart = -10;
 	fractionalPart = 22;
-	printSerial("%i,%i gives: ",integerPart,fractionalPart);
+	print("%i,%i gives: ",integerPart,fractionalPart);
 	correctIntFracNumber((int32_t *) &integerPart, (int32_t *) &fractionalPart);
-	printSerial("%i.%i\n",integerPart,fractionalPart);
+	print("%i.%i\n",integerPart,fractionalPart);
 	ok = ok && (integerPart == -7) && (fractionalPart == -8);
 
 	integerPart = 10;
 	fractionalPart = -31;
-	printSerial("%i,%i gives: ",integerPart,fractionalPart);
+	print("%i,%i gives: ",integerPart,fractionalPart);
 	correctIntFracNumber((int32_t *) &integerPart, (int32_t *) &fractionalPart);
-	printSerial("%i.%i\n",integerPart,fractionalPart);
+	print("%i.%i\n",integerPart,fractionalPart);
 	ok = ok && (integerPart == 6) && (fractionalPart == 9);
 
-	printSerial("correctIntFracNumber: %s\n\n", PASSFAIL_STR(ok));
+	print("correctIntFracNumber: %s\n\n", PASSFAIL_STR(ok));
 	testsOK = testsOK && ok;
 
-	printSerial("\n");
+	print("\n");
 
 	///////////////////////////////////////////////////////
 

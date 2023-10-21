@@ -9,9 +9,10 @@
 #include "math.h"
 #include "utilities.h"
 
-extern void printSerial(const char* format, ...);
+extern void print(const char* format, ...);
 extern void errorHandler(const char * func, uint32_t line, const char * file);
 #ifdef DEBUG_PRINT
+	// Debug data will be printed over the serial port
     extern void printU64hex(uint64_t x);
     #define TEST_LENGTH_SAMPLES 20
 #endif
@@ -426,24 +427,24 @@ static void calculateSPLQ31(void) {
 		count += 2;
 	}
 	#ifdef DEBUG_PRINT
-		printSerial("Input: min = %i, max = %i, centre = %i, amplitude = %u, bitshift = %u\n\n",
+		print("Input: min = %i, max = %i, centre = %i, amplitude = %u, bitshift = %u\n\n",
 				     min, max, centre, amplitude, bitShift);
-		printSerial("Scaled FFT real input:\n");
+		print("Scaled FFT real input:\n");
 		for (uint32_t i = 0; i < (2*TEST_LENGTH_SAMPLES); i += 2) {
-			printSerial("%i\n", FFTdata[i]);
+			print("%i\n", FFTdata[i]);
 		}
-		printSerial("\n");
+		print("\n");
 	#endif
 
 	// Calculate the FFT; the output is internally divided by FFT_N (number of points)
 	arm_cfft_q31(&S, FFTdata, 0, 1);
 
 	#ifdef DEBUG_PRINT
-		printSerial("Raw FFT output:\n");
+		print("Raw FFT output:\n");
 		for (uint32_t i = 0; i < (TEST_LENGTH_SAMPLES); i++) {
-			printSerial("%i\n", FFTdata[i]);
+			print("%i\n", FFTdata[i]);
 		}
-		printSerial("\n");
+		print("\n");
 	#endif
 
 	// find FFT output max, min values (in 1st half of output), ignoring the two dc bin values:
@@ -530,29 +531,29 @@ static void calculateSPLQ31(void) {
 	#endif
 
 	#ifdef DEBUG_PRINT
-		printSerial("FFT output: max = %i, amplitude = %u, bitshift = %u\n\n", max, amplitude2, bitShift2);
+		print("FFT output: max = %i, amplitude = %u, bitshift = %u\n\n", max, amplitude2, bitShift2);
 
-		printSerial("Scaled FFT output:\n");
+		print("Scaled FFT output:\n");
 		for (uint32_t i = 0; i < TEST_LENGTH_SAMPLES; i++) {
-			printSerial("%i\n", FFTdata[i]);
+			print("%i\n", FFTdata[i]);
 		}
-		printSerial("\n");
+		print("\n");
 
-		printSerial("Squared magnitude:\n");
+		print("Squared magnitude:\n");
 		for (uint32_t i = 0; i < (TEST_LENGTH_SAMPLES/2); i++) {
-			printSerial("%i\n", sqmag[i]);
+			print("%i\n", sqmag[i]);
 		}
-		printSerial("\n");
+		print("\n");
 
-		printSerial("sumSq = ");
+		print("sumSq = ");
 		printU64hex(sumSq);
-		printSerial("\n");
+		print("\n");
 		for (uint32_t i = 0; i < SOUND_FREQ_BANDS; i++) {
-			printSerial("Band %i sumSq = ",i);
+			print("Band %i sumSq = ",i);
 			printU64hex(bandSum[i]);
-			printSerial("\n");
+			print("\n");
 		}
-		printSerial("bs_right = %i\n\n", bs_right);
+		print("bs_right = %i\n\n", bs_right);
 	#endif
 }
 

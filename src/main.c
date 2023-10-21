@@ -14,7 +14,6 @@
 #include "arm_const_structs.h"
 #include "sound_measurement.h"
 #include "math.h"
-#include "UART.h"
 #include "utilities.h"
 
 bool simplified_readout(void);
@@ -34,7 +33,7 @@ int main(void) {
 
 	#ifdef DEBUG_PRINT
 	const char * startupReason = getStartupReason();
-	printSerial("Restart reason: %s\n", startupReason);
+	print("Restart reason: %s\n", startupReason);
 	#endif
 
 	if (!soundInit()) {
@@ -48,9 +47,9 @@ int main(void) {
 	while (true) {
 		if (simplified_readout()) {
 			clearMaximumAmplitude(); // Call this at any time
-			printSerial("%u.%u  %u.%02u  %u\n", soundData_g.SPL_dBA_int,
-					    soundData_g.SPL_dBA_fr_1dp, soundData_g.peak_amp_mPa_int,
-						soundData_g.peak_amp_mPa_fr_2dp, soundData_g.stable);
+			print("%u.%u  %u.%02u  %u\n", soundData_g.SPL_dBA_int,
+				  soundData_g.SPL_dBA_fr_1dp, soundData_g.peak_amp_mPa_int,
+				  soundData_g.peak_amp_mPa_fr_2dp, soundData_g.stable);
 		}
 	}
 	return 0;
