@@ -38,12 +38,9 @@ int main(void) {
 		errorHandler(__func__, __LINE__, __FILE__);
 	}
 
-	if (!enableMic(true)) {
+	if (!enableMicrophone(true)) {
 		errorHandler(__func__, __LINE__, __FILE__);
 	}
-
-	enable_I2S_DMA_interrupts(true);
-	clearMaxAmpFollower();
 
 	while (true) {
 

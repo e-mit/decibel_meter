@@ -18,9 +18,6 @@
 
 extern void errorHandler(const char * func, uint32_t line, const char * file);
 
-// global state vars:
-// micEnabled is not declared static so it can be accessed via inline function BUT must
-// not be declared extern elsewhere, to maintain encapsulation.
 volatile bool sound_DMA_semaphore = false; // set true at end of every DMA ISR
 volatile bool SPL_calc_complete = true; // set true after every SPL calculation, which may be on every DMA ISR
 										// OR every N ISRs, depending on filter settings.
@@ -29,7 +26,6 @@ volatile bool SPL_calc_complete = true; // set true after every SPL calculation,
 
 // private state variables (static or read through inline func):
 static volatile bool SPL_calc_enabled = false;
-volatile bool micEnabled = false; // whether it is being clocked
 volatile bool DMAintEnabled = false; // whether interrupts can fire
 volatile bool micStable = false; // goes false when warmup time is complete
 
@@ -210,7 +206,7 @@ void DMA1_Channel1_IRQHandler(void) {
 	HAL_DMA_IRQHandler(&hdma_spi1_rx);
 }
 
-// Setup for reading out the microphone: DMA, Timer, I2S.
+// Initialize hardware for reading out the microphone: DMA, Timer, I2S.
 // Return bool success.
 bool sound_init(void) {
 	DMA_Init();
@@ -308,31 +304,30 @@ static bool TIM3_Init(void) {
 	return true;
 }
 
-// Enable: starts the I2S clock and starts warmup timer (no DMA interrupt enabling)
+// Enable: starts the I2S clock, warmup timer, and DMA interrupts
 // Disable: stops the DMA interrupts and stops I2S clock.
-bool enableMic(bool bEnable) {
+bool enableMicrophone(bool bEnable) {
+	static bool micEnabled = false;
 	if (bEnable == micEnabled) {
 		return true;
 	}
 	if (bEnable) {
-		// start the I2S clock and start the warmup timer, but do not start the DMA interrupts (separate)
 		startWarmupPeriod();
-		// NB: use HALF_BUFLEN here because it is the number of I2S samples, not uint16s
 		if (HAL_I2S_Receive_DMA(&hi2s1, (uint16_t *) dmaBuffer, HALF_BUFLEN) != HAL_OK) {
 			return false;
 		}
+		enable_I2S_DMA_interrupts(true);
+		clearMaxAmpFollower();
 		micEnabled = true;
 		micStable = false;
 	}
 	else {
-		// stop I2S clock and stop DMA interrupts (if not already done)
-		enable_I2S_DMA_interrupts(false); // disable DMA interrupts
+		enable_I2S_DMA_interrupts(false);
 		enableSPLcalculation(false);
 		if (HAL_I2S_DMAStop(&hi2s1) != HAL_OK) {
 			return false;
 		}
 		micEnabled = false;
-		micStable = false;
 	}
 	return true;
 }
@@ -454,7 +449,7 @@ static void processHalfDMAbuffer(uint32_t halfBufferStart) {
 		if (autoStopI2S) {
 			NhalfBuffersCmpltd++;
 			if (NhalfBuffersCmpltd >= NhalfBufLimit) {
-				enableMic(false);
+				enableMicrophone(false);
 			}
 		}
 	#endif

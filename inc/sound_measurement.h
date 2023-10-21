@@ -55,7 +55,7 @@ __attribute__((always_inline)) inline bool micHasStabilized(void) {
 // User functions:
 
 bool sound_init(void);
-bool enableMic(bool bEnable);            // starts/stops I2S clock
+bool enableMicrophone(bool bEnable);            // starts/stops I2S clock
 void pause_DMA_interrupts(bool bPause);
 void enable_I2S_DMA_interrupts(bool bEnable); // starts DMA interrupts and maxAmp following
 void enableSPLcalculation(bool bEnable);
