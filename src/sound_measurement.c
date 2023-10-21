@@ -27,7 +27,6 @@ volatile bool SPL_calc_complete = true; // set true after every SPL calculation,
 // private state variables (static or read through inline func):
 static volatile bool SPL_calc_enabled = false;
 volatile bool DMAintEnabled = false; // whether interrupts can fire
-volatile bool micStable = false; // goes false when warmup time is complete
 
 #ifdef FILTER_SPL
 	static volatile int32_t spl_int_sum = 0;
@@ -107,8 +106,9 @@ static void SPLsumToIntAverage(uint8_t * SPL_int, uint8_t * SPL_fr_1dp, const in
 
 
 // Obtain the output SoundData, during a brief period of disabled DMA interrupt.
-// The internal data are never reset to zero, so will read last data if DMAint are disabled.
-// In error cases, the output data are set to zero.
+// Note that disabling the interrupt prevents the possibility of corrupted data
+// but does not (under non-error conditions) cause loss of sound data because the
+// DMA buffer is still being filled with I2S data.
 void getSoundDataStruct(SoundData_t * data, bool getSPLdata, bool getMaxAmpData) {
 	if (DMAintEnabled) {
 		NVIC_DisableIRQ(DMA1_Channel1_IRQn);
@@ -227,14 +227,14 @@ static void DMA_Init(void) {
 }
 
 // Call this from external code to clear the maximum amplitude value.
-// It is carried out at the next DMA interrupt.
 void clearMaximumAmplitude(void) {
 	maximumAmplitude = 0;
 }
 
-// Prepare and start a one-shot timer to indicate the short time period during which the
+// Prepare a one-shot timer to indicate the short time period during which the
 // microphone output is inaccurate after power-on.
-// This is output with the data for advice only: all functions still operate as normal during this period.
+// This is output with the data for advice only: all functions still operate as
+// normal during this period.
 static bool startWarmupPeriod(void) {
 	__HAL_TIM_SetCounter(&htim3,0);
 	if (HAL_TIM_Base_Start(&htim3) != HAL_OK) {
@@ -243,6 +243,7 @@ static bool startWarmupPeriod(void) {
 	return true;
 }
 
+// See whether the warmup time has finished
 bool micWarmupComplete(void) {
 	bool complete = __HAL_TIM_GET_FLAG(&htim3, TIM_SR_UIF);
 	if (complete) {
@@ -298,13 +299,16 @@ bool enableMicrophone(bool bEnable) {
 		if (HAL_I2S_Receive_DMA(&hi2s1, (uint16_t *) dmaBuffer, HALF_BUFLEN) != HAL_OK) {
 			return false;
 		}
-		enable_I2S_DMA_interrupts(true);
 		clearMaximumAmplitude();
+		amplitudeSettlingPeriods = 0;
+		__HAL_DMA_CLEAR_FLAG(&hdma_spi1_rx, DMA_ISR_TCIF1 | DMA_ISR_HTIF1 | DMA_ISR_TEIF1 | DMA_ISR_GIF1);
+		NVIC_EnableIRQ(DMA1_Channel1_IRQn);
+		DMAintEnabled = true;
 		micEnabled = true;
-		micStable = false;
 	}
 	else {
-		enable_I2S_DMA_interrupts(false);
+		NVIC_DisableIRQ(DMA1_Channel1_IRQn);
+		DMAintEnabled = false;
 		enableSPLcalculation(false);
 		if (HAL_I2S_DMAStop(&hi2s1) != HAL_OK) {
 			return false;
@@ -312,28 +316,6 @@ bool enableMicrophone(bool bEnable) {
 		micEnabled = false;
 	}
 	return true;
-}
-
-void enable_I2S_DMA_interrupts(bool bEnable) {
-	if (bEnable == DMAintEnabled) {
-		return;
-	}
-	if (bEnable) {
-		// enable the interrupts and also begin a new digital filter settling period
-		// for the amplitude measurement, during which the maxamp
-		// measurement (and thus ampl interrupt) are disabled (read ampl as 0). Also reset maxAmp value.
-		amplitudeSettlingPeriods = 0;
-		clearMaximumAmplitude();
-		// first clear the interrupt flags:
-		__HAL_DMA_CLEAR_FLAG(&hdma_spi1_rx, DMA_ISR_TCIF1 | DMA_ISR_HTIF1 | DMA_ISR_TEIF1 | DMA_ISR_GIF1);
-		NVIC_EnableIRQ(DMA1_Channel1_IRQn);
-		DMAintEnabled = true;
-	}
-	else {
-		// just disable interrupts; no other clearing or state changes.
-		DMAintEnabled = false;
-		NVIC_DisableIRQ(DMA1_Channel1_IRQn);
-	}
 }
 
 // Convert input raw I2S data into signed 32 bit numbers, assuming the I2S data is Left

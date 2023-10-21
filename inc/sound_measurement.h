@@ -57,7 +57,6 @@ __attribute__((always_inline)) inline bool micHasStabilized(void) {
 bool sound_init(void);
 bool enableMicrophone(bool bEnable);
 void clearMaximumAmplitude(void);
-void enable_I2S_DMA_interrupts(bool bEnable);
 void enableSPLcalculation(bool bEnable);
 void getSoundDataStruct(SoundData_t * data, bool getSPLdata, bool getMaxAmpData);
 void amplitude_DN_to_mPa(uint32_t ampDN, uint16_t * intAmp_mPa, uint8_t * frac2dpAmp_mPa);
