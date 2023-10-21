@@ -44,12 +44,12 @@ typedef struct __attribute__((packed)) {
 ////////////////////////////////////////////////////////
 // User interface functions:
 
-bool sound_init(void);
+bool soundInit(void);
 bool enableMicrophone(bool bEnable);
 void clearMaximumAmplitude(void);
 void enableSPLcalculation(bool bEnable);
 volatile bool isSPLcalcComplete(void);
-void getSoundDataStruct(SoundData_t * data, bool getSPLdata, bool getMaxAmpData);
+void getSoundData(SoundData_t * data, bool getSPLdata, bool getMaxAmpData);
 
 //////////////////////////////////////////////////////////////////////
 

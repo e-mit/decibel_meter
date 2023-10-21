@@ -51,14 +51,14 @@ static volatile uint32_t amplitudeSettlingPeriods = 0;
 
 static void DMA_Init(void);
 static bool I2S1_Init(void);
-static bool startWarmupPeriod(void);
+static bool startMicSettlingPeriod(void);
 static bool TIM3_Init(void);
 static void decodeI2SdataLch(const uint16_t * inBuf, const uint32_t inBuflen, int32_t * outBuf);
 static void processHalfDMAbuffer(uint32_t halfBufferStart);
-static void calculateSPLfast(void);
+static void calculateSPLQ31(void);
 static uint32_t getFilteredMaxAmplitudeQ31(const int32_t * data, const uint32_t length,
 										   bool reset, bool updateMaxAmpFollower);
-static bool micWarmupComplete(void);
+static bool micSettlingComplete(void);
 static void reset_SPL_state(void);
 
 //////////////////////////////////////////////////////////////////////////////
@@ -71,7 +71,7 @@ volatile bool isSPLcalcComplete(void) {
 // Note that disabling the interrupt prevents the possibility of corrupted data
 // but does not (under non-error conditions) cause loss of sound data because the
 // DMA buffer is still being filled with I2S data.
-void getSoundDataStruct(SoundData_t * data, bool getSPLdata, bool getMaxAmpData) {
+void getSoundData(SoundData_t * data, bool getSPLdata, bool getMaxAmpData) {
 	if (DMAintEnabled) {
 		NVIC_DisableIRQ(DMA1_Channel1_IRQn);
 	}
@@ -141,7 +141,7 @@ void getSoundDataStruct(SoundData_t * data, bool getSPLdata, bool getMaxAmpData)
 		data->peak_amp_mPa_fr_2dp = fracPart;
 	}
 
-	data->stable = micWarmupComplete();
+	data->stable = micSettlingComplete();
 
 	if (DMAintEnabled) {
 		NVIC_EnableIRQ(DMA1_Channel1_IRQn);
@@ -155,7 +155,7 @@ void DMA1_Channel1_IRQHandler(void) {
 
 // Initialize hardware for reading out the microphone: DMA, Timer, I2S.
 // Return bool success.
-bool sound_init(void) {
+bool soundInit(void) {
 	DMA_Init();
 	bool ok = TIM3_Init();
 	return (ok && I2S1_Init());
@@ -189,10 +189,10 @@ void clearMaximumAmplitude(void) {
 }
 
 // Prepare a one-shot timer to indicate the short time period during which the
-// microphone output is inaccurate after power-on.
+// microphone output is inaccurate after power-on (warmup/settling time).
 // This is output with the data for advice only: all functions still operate as
 // normal during this period.
-static bool startWarmupPeriod(void) {
+static bool startMicSettlingPeriod(void) {
 	__HAL_TIM_SetCounter(&htim3,0);
 	if (HAL_TIM_Base_Start(&htim3) != HAL_OK) {
 		return false;
@@ -200,8 +200,8 @@ static bool startWarmupPeriod(void) {
 	return true;
 }
 
-// See whether the warmup time has finished
-static bool micWarmupComplete(void) {
+// See whether the warmup/settling time has finished
+static bool micSettlingComplete(void) {
 	bool complete = __HAL_TIM_GET_FLAG(&htim3, TIM_SR_UIF);
 	if (complete) {
 		HAL_TIM_Base_Stop(&htim3);
@@ -252,7 +252,7 @@ bool enableMicrophone(bool bEnable) {
 		return true;
 	}
 	if (bEnable) {
-		startWarmupPeriod();
+		startMicSettlingPeriod();
 		if (HAL_I2S_Receive_DMA(&hi2s1, (uint16_t *) dmaBuffer, HALF_BUFLEN) != HAL_OK) {
 			return false;
 		}
@@ -320,7 +320,7 @@ static void processHalfDMAbuffer(uint32_t halfBufferStart) {
 	}
 	if (SPL_calc_enabled) {
 		// Calculate the A-weighted SPL and octave bands SPL
-		calculateSPLfast();
+		calculateSPLQ31();
 	}
 }
 
@@ -332,8 +332,8 @@ void HAL_I2S_ErrorCallback(I2S_HandleTypeDef *hi2s) {
 // dataBuffer must contain (at least) FFT_N values
 // dataBuffer is reused for storage throughout this function. Since dataBuffer is shared by both halves of
 // the DMA buffer, this function must complete before the next DMA interrupt.
-// This uses integers, rather than floats, for improved speed.
-static void calculateSPLfast(void) {
+// This uses Q31 integers, rather than floats, for improved speed.
+static void calculateSPLQ31(void) {
 	static q31_t FFTdata[2*FFT_N] = {0}; // interleaved complex, so need 2x number of elements.
 
 	// provide constants which depend on length of FFT/input sample and Fs

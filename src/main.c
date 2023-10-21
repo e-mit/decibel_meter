@@ -37,7 +37,7 @@ int main(void) {
 	printSerial("Restart reason: %s\n", startupReason);
 	#endif
 
-	if (!sound_init()) {
+	if (!soundInit()) {
 		errorHandler(__func__, __LINE__, __FILE__);
 	}
 
@@ -70,7 +70,7 @@ bool simplified_readout(void) {
 			return false;
 		}
 		// Acquisition/calculation complete: get data
-		getSoundDataStruct(&soundData_g, true, true);
+		getSoundData(&soundData_g, true, true);
 		enableSPLcalculation(false); // reset the calculation, ready for restart
 		stage = 0;
 		return true;

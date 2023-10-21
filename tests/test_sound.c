@@ -211,12 +211,12 @@ bool soundUnitTests(void) {
 
 	////////////////////////////
 
-	printSerial("calculateSPLfast() test\n");
+	printSerial("calculateSPLQ31() test\n");
 
 	memcpy((int32_t *) &dataBuffer, &x1_32, 4*FFT_N); // 3rd arg is #bytes
 
 	RESET_TMR15_AND_FLAG;
-	calculateSPLfast();
+	calculateSPLQ31();
 	GET_TIME_TMR15(time_us);
 
 	float theSPL = ((float) SPL_int) + (((float) SPL_frac_1dp)/10.0);
