@@ -210,12 +210,16 @@ void DMA1_Channel1_IRQHandler(void) {
 	HAL_DMA_IRQHandler(&hdma_spi1_rx);
 }
 
+// Setup for reading out the microphone: DMA, Timer, I2S.
+// Return bool success.
 bool sound_init(void) {
 	DMA_Init();
-	TIM3_Init();
-	return I2S1_Init();
+	bool ok = TIM3_Init();
+	return (ok && I2S1_Init());
 }
 
+// Initialize I2S but do not enable it.
+// Return bool success.
 static bool I2S1_Init(void) {
 	hi2s1.Instance = SPI1;
 	hi2s1.Init.Mode = I2S_MODE_MASTER_RX;
@@ -227,6 +231,7 @@ static bool I2S1_Init(void) {
 	return (HAL_I2S_Init(&hi2s1) == HAL_OK);
 }
 
+// Initialize DMA but do not enable DMA interrupts.
 static void DMA_Init(void) {
 	__HAL_RCC_DMA1_CLK_ENABLE();
 
@@ -235,16 +240,19 @@ static void DMA_Init(void) {
 	#endif
 
 	HAL_NVIC_SetPriority(DMA1_Channel1_IRQn, DMA_IRQ_PRIORITY, 0);
-	// note that the interrupt is not enabled here.
 }
 
+// Call this from external code to clear the maximum amplitude value.
+// It is carried out at the next DMA interrupt.
 static inline void clearAmpFollowerInternal(void) {
 	maxAmp_follower = 0;
 	clearMaxAmpFollowerFlag = false;
 }
 
+// Prepare and start a one-shot timer that, on expiry, sets micStable = true and then turns itself off.
+// This is provided because the microphone output is inaccurate for a short period after power-on.
+// This is advisory only: all functions still operate as normal during this period.
 static bool startWarmupPeriod(void) {
-	// prepare and start a one-shot timer that, on expiry, sets micStable = true and then turns itself off.
 	__HAL_TIM_SetCounter(&htim3,0);
 	if (HAL_TIM_Base_Start_IT(&htim3) != HAL_OK) {
 		return false;
@@ -259,7 +267,9 @@ void TIM3_IRQHandler(void) {
 	clearMaxAmpFollower();
 }
 
-static void TIM3_Init(void) {
+// Initialize TIMER3 but do not start it.
+// Return bool success.
+static bool TIM3_Init(void) {
 	TIM_ClockConfigTypeDef sClockSourceConfig = {0};
 	TIM_MasterConfigTypeDef sMasterConfig = {0};
 	htim3.Instance = TIM3;
@@ -275,19 +285,19 @@ static void TIM3_Init(void) {
 	htim3.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
 	htim3.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
 	if (HAL_TIM_Base_Init(&htim3) != HAL_OK) {
-		errorHandler(__func__, __LINE__, __FILE__);
+		return false;
 	}
 	sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
 	if (HAL_TIM_ConfigClockSource(&htim3, &sClockSourceConfig) != HAL_OK) {
-		errorHandler(__func__, __LINE__, __FILE__);
+		return false;
 	}
 	sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
 	sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
 	if (HAL_TIMEx_MasterConfigSynchronization(&htim3, &sMasterConfig) != HAL_OK) {
-		errorHandler(__func__, __LINE__, __FILE__);
+		return false;
 	}
 
-	// set priority but do not enable yet - may not be used
+	// Set priority but do not enable yet - may not be used
 	#if ((TMR3_IRQ_PRIORITY > 3)||(TMR3_IRQ_PRIORITY<0))
 		#error("Interrupt priority must be 0-3")
 	#endif
@@ -295,10 +305,11 @@ static void TIM3_Init(void) {
 
 	// Initialising the time base causes the UIF flag to get set: clear it.
 	__HAL_TIM_CLEAR_FLAG(&htim3, TIM_SR_UIF);
+	return true;
 }
 
-// enable: starts the I2S clock and starts warmup timer (no DMA interrupt enabling)
-// disable: stops the DMA interrupts and stops I2S clock.
+// Enable: starts the I2S clock and starts warmup timer (no DMA interrupt enabling)
+// Disable: stops the DMA interrupts and stops I2S clock.
 bool enableMic(bool bEnable) {
 	if (bEnable == micEnabled) {
 		return true;
@@ -377,17 +388,15 @@ void enable_I2S_DMA_interrupts(bool bEnable) {
 	}
 }
 
-// convert input raw I2S data into signed 32 bit numbers, assuming the I2S data is Left
+// Convert input raw I2S data into signed 32 bit numbers, assuming the I2S data is Left
 // channel only and the first datum starts at element 0.
 // inBuflen is simply the number of elements in inBuf
 static void decodeI2SdataLch(const uint16_t inBuf[], const uint32_t inBuflen, int32_t outBuf[]) {
 	uint32_t outCount = 0;
-	for (uint32_t i = 0; i < inBuflen; i+=4) {
+	for (uint32_t i = 0; i < inBuflen; i += 4) {
 		// join MS16bits and LS16bits, then shift the result down 8 bits because it is a 24-bit
-		// value, rather than a 32-bit one. NOTE: it MUST be done like this to get the correct
-		// sign bit; cannot do it like the line below.
+		// value, rather than a 32-bit one.
 		outBuf[outCount] = ((int32_t) ((((uint32_t) inBuf[i]) << 16) | ((uint32_t) inBuf[i+1]))) >> 8;
-		//NO: outBuf[outCount] = (int32_t) ((((uint32_t) inBuf[i]) << 8) | (((uint32_t) inBuf[i+1]) >> 8));
 		outCount++;
 	}
 }
