@@ -1,5 +1,4 @@
-/** NOTE: this file was called "system_stm32g0xx.c" and is auto-generated for every project and is always (?) the same
-  ******************************************************************************
+/*******************************************************************************
   * @file    system_stm32g0xx.c
   * @author  MCD Application Team
   * @brief   CMSIS Cortex-M0+ Device Peripheral Access Layer System Source File
