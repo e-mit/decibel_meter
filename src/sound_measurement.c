@@ -9,6 +9,22 @@
 #include "sound_LUTs.h"
 #include "math.h"
 
+/* Conversion of microphone digital output to sound pressure.
+   This depends on the microphone sensitivity (S) and the
+   output data bitdepth (N).
+	  pressure/mPa = (digital amplitude)*ik_mPa;
+	  ik_mPa = sqrt(2)/((10^((S/dB)/20))*((2^(N-1))-1))
+   e.g. If S = -26 dB and N = 24, then: ik_mPa = 3.3638e-3
+*/
+const float ik_mPa = 3.3638e-3;
+/* Decibel scale factor 'dBscale' is constant for a given microphone:
+      dBscale = 20*log10((ik_mPa/1000)/(20e-6))
+   e.g. if S = -26dB and N = 24; dBscale = -15.5 (to 1.d.p.)
+*/
+const int32_t dBscale_int = -15;
+const int32_t dBscale_frac = -5;
+
+
 extern void print(const char* format, ...);
 extern void errorHandler(const char * func, uint32_t line, const char * file);
 #ifdef DEBUG_PRINT
@@ -95,11 +111,11 @@ void getSoundData(SoundData_t * data, bool getSPLdata, bool getMaxAmpData) {
 			}
 		}
 		else {
-			SPLsumToIntAverage(&(data->SPL_dBA_int), &(data->SPL_dBA_fr_1dp), spl_int_sum,
+			sumToIntAverage(&(data->SPL_dBA_int), &(data->SPL_dBA_fr_1dp), spl_int_sum,
 					           spl_frac1dp_sum, spl_sum_count);
 
 			for (uint32_t i = 0; i < SOUND_FREQ_BANDS; i++) {
-				SPLsumToIntAverage(&(data->SPL_bands_dB_int[i]), &(data->SPL_bands_dB_fr_1dp[i]),
+				sumToIntAverage(&(data->SPL_bands_dB_int[i]), &(data->SPL_bands_dB_fr_1dp[i]),
 						           band_spl_int_sum[i],	band_spl_frac1dp_sum[i], spl_sum_count);
 			}
 		}
@@ -137,7 +153,7 @@ void getSoundData(SoundData_t * data, bool getSPLdata, bool getMaxAmpData) {
 	if (getMaxAmpData) {
 		uint16_t intPart = 0;
 		uint8_t fracPart = 0;
-		amplitude_DN_to_mPa(maximumAmplitude, &intPart, &fracPart);
+		amplitude_DN_to_mPa(maximumAmplitude, ik_mPa, &intPart, &fracPart);
 		data->peak_amp_mPa_int = intPart;
 		data->peak_amp_mPa_fr_2dp = fracPart;
 	}
@@ -507,9 +523,11 @@ static void calculateSPLQ31(void) {
 
 	// Add on the dB terms accounting for the microphone parameters
 	// and (only for the A-weighted SPL) the weighting scale factor
-	scaleSPL(sumSq, tenlog10SF_int, tenlog10SF_frac, (int32_t *) &SPL_int, (int32_t *) &SPL_frac_1dp);
+	scaleSPL(sumSq, dBscale_int, dBscale_frac, tenlog10SF_int, tenlog10SF_frac,
+			 (int32_t *) &SPL_int, (int32_t *) &SPL_frac_1dp);
 	for (uint32_t i=0; i<SOUND_FREQ_BANDS; i++) {
-		scaleSPL(bandSum[i], 0, 0, (int32_t *) &(bandSPL_int[i]), (int32_t *) &(bandSPL_frac_1dp[i]));
+		scaleSPL(bandSum[i], dBscale_int, dBscale_frac, 0, 0,
+				 (int32_t *) &(bandSPL_int[i]), (int32_t *) &(bandSPL_frac_1dp[i]));
 	}
 
 	#ifdef FILTER_SPL
