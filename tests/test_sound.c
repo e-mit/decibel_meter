@@ -1,4 +1,21 @@
 
+// test data for verifying the 10log10 function:
+#define Ntest_inputs_10log10 20
+extern const uint64_t testInputs[];
+// these are the expected values of 10*log10(testInputs), given to 1.d.p
+extern const float testTrueOutputs[];
+/////////////////////////////////////////
+
+const uint64_t testInputs[Ntest_inputs_10log10] = {11170, 51992, 242002, 1126424,
+5243060, 24404378, 113592759, 528729520, 2461027526, 11455113150, 53319036834,
+248179101477, 1155175900896, 5376888521506, 25027296838757, 116492202609360,
+542225289299535, 2523845010827701, 11747503785573328, 54679999999999952};
+
+const float testTrueOutputs[Ntest_inputs_10log10] = {40.5, 47.2, 53.8, 60.5,
+67.2, 73.9, 80.6, 87.2, 93.9, 100.6, 107.3, 113.9, 120.6, 127.3, 134.0, 140.7,
+147.3, 154.0, 160.7, 167.4};
+
+/////////////////////////////////////////////////////
 
 #ifdef DEBUG_AND_TESTS
 	#define NTIMES (4*2)
