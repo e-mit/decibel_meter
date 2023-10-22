@@ -11,6 +11,11 @@
 #include <stdbool.h>
 #include "sound_measurement.h"
 
+// Clock setup
+#define SYSCLK_FREQ_HZ 32000000
+
+//////////////////////////////////////////////////////////////////////////////////
+
 // UART
 
 #define USART4_TX_PIN GPIO_PIN_0

@@ -6,7 +6,6 @@
 #include "hardware_profile.h"
 #include "stm32g0xx_hal.h"
 #include <stdbool.h>
-#include "project_config.h"
 #include "print_functions.h"
 #include "microphone_constants.h"
 
