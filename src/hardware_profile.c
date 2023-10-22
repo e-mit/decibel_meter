@@ -11,6 +11,7 @@
 
 static UART_HandleTypeDef uart;
 TIM_HandleTypeDef settleTimer;
+I2S_HandleTypeDef i2s1;
 
 ////////////////////////////////////////
 
@@ -160,6 +161,20 @@ bool TIM3_Init(void) {
 	__HAL_TIM_CLEAR_FLAG(&settleTimer, TIM_SR_UIF);
 	return true;
 }
+
+// Initialize I2S but do not enable it.
+// Return bool success.
+bool I2S1_Init(void) {
+	i2s1.Instance = SPI1;
+	i2s1.Init.Mode = I2S_MODE_MASTER_RX;
+	i2s1.Init.Standard = I2S_STANDARD_PHILIPS;
+	i2s1.Init.DataFormat = I2S_DATAFORMAT_24B;
+	i2s1.Init.MCLKOutput = I2S_MCLKOUTPUT_DISABLE;
+	i2s1.Init.AudioFreq = I2S_AUDIOFREQ;
+	i2s1.Init.CPOL = I2S_CPOL_LOW;
+	return (HAL_I2S_Init(&i2s1) == HAL_OK);
+}
+
 
 // Provide a print interface for print_functions.
 void printString(char * str, uint16_t len) {

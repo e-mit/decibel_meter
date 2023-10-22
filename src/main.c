@@ -22,7 +22,9 @@ int main(void) {
 		errorHandler(__func__, __LINE__, __FILE__);
 	}
 
-	if (!soundInit(&settleTimer)) {
+	soundInit(&i2s1, &settleTimer);
+
+	if (!I2S1_Init()) {
 		errorHandler(__func__, __LINE__, __FILE__);
 	}
 

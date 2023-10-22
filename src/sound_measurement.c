@@ -48,10 +48,11 @@ static volatile int32_t bandSPL_int[SOUND_FREQ_BANDS] = {0}, bandSPL_frac_1dp[SO
 static volatile uint32_t maximumAmplitude = 0; // stores the maximum until cleared by user
 static volatile uint16_t dmaBuffer[FULL_BUFLEN] = {0}; // holds raw uint16s received from I2S module, used in 2 halves
 static volatile int32_t dataBuffer[EIGHTH_BUFLEN] = {0}; // holds final 24-bit sound data from half of the DMA
-I2S_HandleTypeDef hi2s1;
+
+// Handles for peripherals:
+static TIM_HandleTypeDef * hSettleTimer;
+static I2S_HandleTypeDef * hI2S;
 DMA_HandleTypeDef hdma_spi1_rx;
-// Peripheral hardware handles:
-static TIM_HandleTypeDef * pSettleTimer;
 
 // Counter used to ignore the maximum amplitude for the first
 // N_AMP_SETTLE_PERIODS half-DMA interrupts, allowing the filter to settle.
@@ -68,7 +69,6 @@ static volatile uint32_t amplitudeSettlingPeriods = 0;
 //////////////////////////////////////////////////////////////////////////////
 
 static void DMA_Init(void);
-static bool I2S1_Init(void);
 static bool startMicSettlingPeriod(void);
 static void decodeI2SdataLch(const uint16_t * inBuf, const uint32_t inBuflen, int32_t * outBuf);
 static void processHalfDMAbuffer(uint32_t halfBufferStart);
@@ -172,23 +172,10 @@ void DMA1_Channel1_IRQHandler(void) {
 
 // Initialize hardware for reading out the microphone: DMA, Timer, I2S.
 // Return bool success.
-bool soundInit(TIM_HandleTypeDef * pTimer) {
-	pSettleTimer = pTimer;
-	DMA_Init();
-	return I2S1_Init();
-}
-
-// Initialize I2S but do not enable it.
-// Return bool success.
-static bool I2S1_Init(void) {
-	hi2s1.Instance = SPI1;
-	hi2s1.Init.Mode = I2S_MODE_MASTER_RX;
-	hi2s1.Init.Standard = I2S_STANDARD_PHILIPS;
-	hi2s1.Init.DataFormat = I2S_DATAFORMAT_24B;
-	hi2s1.Init.MCLKOutput = I2S_MCLKOUTPUT_DISABLE;
-	hi2s1.Init.AudioFreq = I2S_AUDIOFREQ;
-	hi2s1.Init.CPOL = I2S_CPOL_LOW;
-	return (HAL_I2S_Init(&hi2s1) == HAL_OK);
+void soundInit(I2S_HandleTypeDef * I2Shandle, TIM_HandleTypeDef * timerHandle) {
+	hI2S = I2Shandle;
+	hSettleTimer = timerHandle;
+  DMA_Init();
 }
 
 // Initialize DMA but do not enable DMA interrupts.
@@ -210,8 +197,8 @@ void clearMaximumAmplitude(void) {
 // This is output with the data for advice only: all functions still operate as
 // normal during this period.
 static bool startMicSettlingPeriod(void) {
-	__HAL_TIM_SetCounter(pSettleTimer, 0);
-	if (HAL_TIM_Base_Start(pSettleTimer) != HAL_OK) {
+	__HAL_TIM_SetCounter(hSettleTimer, 0);
+	if (HAL_TIM_Base_Start(hSettleTimer) != HAL_OK) {
 		return false;
 	}
 	return true;
@@ -219,9 +206,9 @@ static bool startMicSettlingPeriod(void) {
 
 // See whether the warmup/settling time has finished
 static bool micSettlingComplete(void) {
-	bool complete = __HAL_TIM_GET_FLAG(pSettleTimer, TIM_SR_UIF);
+	bool complete = __HAL_TIM_GET_FLAG(hSettleTimer, TIM_SR_UIF);
 	if (complete) {
-		HAL_TIM_Base_Stop(pSettleTimer);
+		HAL_TIM_Base_Stop(hSettleTimer);
 	}
 	return complete;
 }
@@ -235,7 +222,7 @@ bool enableMicrophone(bool bEnable) {
 	}
 	if (bEnable) {
 		startMicSettlingPeriod();
-		if (HAL_I2S_Receive_DMA(&hi2s1, (uint16_t *) dmaBuffer, HALF_BUFLEN) != HAL_OK) {
+		if (HAL_I2S_Receive_DMA(hI2S, (uint16_t *) dmaBuffer, HALF_BUFLEN) != HAL_OK) {
 			return false;
 		}
 		clearMaximumAmplitude();
@@ -249,7 +236,7 @@ bool enableMicrophone(bool bEnable) {
 		NVIC_DisableIRQ(DMA1_Channel1_IRQn);
 		DMAintEnabled = false;
 		enableSPLcalculation(false);
-		if (HAL_I2S_DMAStop(&hi2s1) != HAL_OK) {
+		if (HAL_I2S_DMAStop(hI2S) != HAL_OK) {
 			return false;
 		}
 		micEnabled = false;

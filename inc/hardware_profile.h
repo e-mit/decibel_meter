@@ -61,6 +61,7 @@
 
 extern DMA_HandleTypeDef hdma_spi1_rx;
 extern TIM_HandleTypeDef settleTimer;
+extern I2S_HandleTypeDef i2s1;
 
 void GPIO_Init(void);
 void errorHandler(const char * func, uint32_t line, const char * file);
@@ -68,5 +69,6 @@ bool SystemClock_Config(void);
 bool UART_Init(void);
 void printString(char * str, uint16_t len);
 bool TIM3_Init(void);
+bool I2S1_Init(void);
 
 #endif
