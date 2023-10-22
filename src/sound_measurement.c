@@ -14,13 +14,6 @@
 // This function must be supplied externally:
 extern void errorHandler(const char * func, uint32_t line, const char * file);
 
-#ifdef DEBUG_PRINT
-	// Debug data will be printed over the serial port
-	extern void print(const char* format, ...);  // Supply this function externally
-    extern void printU64hex(uint64_t x);  // Supply this function externally
-    #define TEST_LENGTH_SAMPLES 20  // How many sound samples to print
-#endif
-
 ////////////////////////////////////////////////
 
 #define BIT_ROUNDING_MARGIN 4
@@ -308,26 +301,9 @@ static void calculateSPLQ31(void) {
 		FFTdata[count + 1] = 0;
 		count += 2;
 	}
-	#ifdef DEBUG_PRINT
-		print("Input: min = %i, max = %i, centre = %i, amplitude = %u, bitshift = %u\n\n",
-				     min, max, centre, amplitude, bitShift);
-		print("Scaled FFT real input:\n");
-		for (uint32_t i = 0; i < (2*TEST_LENGTH_SAMPLES); i += 2) {
-			print("%i\n", FFTdata[i]);
-		}
-		print("\n");
-	#endif
 
 	// Calculate the FFT; the output is internally divided by FFT_N (number of points)
 	arm_cfft_q31(fftInstance, FFTdata, 0, 1);
-
-	#ifdef DEBUG_PRINT
-		print("Raw FFT output:\n");
-		for (uint32_t i = 0; i < (TEST_LENGTH_SAMPLES); i++) {
-			print("%i\n", FFTdata[i]);
-		}
-		print("\n");
-	#endif
 
 	// find FFT output max, min values (in 1st half of output), ignoring the two dc bin values:
 	findMinMax(&min, &max, &(FFTdata[2]), ((uint32_t) FFT_N) - 2);
@@ -412,32 +388,6 @@ static void calculateSPLQ31(void) {
 		}
 	#else
 		SPL_calc_complete = true;
-	#endif
-
-	#ifdef DEBUG_PRINT
-		print("FFT output: max = %i, amplitude = %u, bitshift = %u\n\n", max, amplitude2, bitShift2);
-
-		print("Scaled FFT output:\n");
-		for (uint32_t i = 0; i < TEST_LENGTH_SAMPLES; i++) {
-			print("%i\n", FFTdata[i]);
-		}
-		print("\n");
-
-		print("Squared magnitude:\n");
-		for (uint32_t i = 0; i < (TEST_LENGTH_SAMPLES/2); i++) {
-			print("%i\n", sqmag[i]);
-		}
-		print("\n");
-
-		print("sumSq = ");
-		printU64hex(sumSq);
-		print("\n");
-		for (uint32_t i = 0; i < SOUND_FREQ_BANDS; i++) {
-			print("Band %i sumSq = ",i);
-			printU64hex(bandSum[i]);
-			print("\n");
-		}
-		print("bs_right = %i\n\n", bs_right);
 	#endif
 }
 
