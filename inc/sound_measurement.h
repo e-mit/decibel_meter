@@ -2,43 +2,18 @@
 #define SOUND_MEASUREMENT_H
 
 #include <stdbool.h>
-#include "project_config.h"
 #include "stm32g0xx_hal.h"
 
-#define BIT_ROUNDING_MARGIN 4
-
 // Sound settings
-
+#define MIC_SETTLING_PERIOD_MS 1500
 #define FFT_N 128
 #define I2S_AUDIOFREQ I2S_AUDIOFREQ_16K // can be 16, 32, 48
-
-#define FILTER_SPL // if defined, SPL is averaged over N readings, then SPL calc stops.
-				   // if not defined, SPL is continuously calculated on each DMA interrupt
+#define FILTER_SPL // if defined: SPL is averaged over N readings, then SPL calc stops.
+				   // if not defined: SPL is continuously calculated on each DMA interrupt
 				   // and can be read at any time.
-#define FILTER_SPL_N 20 // how many consecutive SPL calculations to average over
-						// NOTE: this is NOT a moving average: Accumulate N readings
+#define FILTER_SPL_N 20 // how many consecutive SPL calculations to average over.
+						// NOTE: this is not a moving average: Accumulate N readings
 						// and average, then start again.
-
-// Interrupt priority.
-// Priority must be a number 0-3; M0+ does not use subpriorities.
-// Equal priority interrupts do not interrupt each other. Lower priorities interrupt higher ones.
-// If two equal-priority interrupts are pending, the IRQn breaks the tie.
-// NB: Systick interrupt priority is 0 with IRQn = -1
-#define DMA_IRQ_PRIORITY 2  // IRQn = 9
-
-#if (I2S_AUDIOFREQ == I2S_AUDIOFREQ_16K)
-	#define I2S_FREQ 15625 // the actual value
-#elif (I2S_AUDIOFREQ == I2S_AUDIOFREQ_32K)
-	#define I2S_FREQ 31250 // the actual value
-#elif (I2S_AUDIOFREQ == I2S_AUDIOFREQ_48K)
-	#define I2S_FREQ 50000 // the actual value
-#else
-	#error "Undefined I2S AUDIO FREQ"
-#endif
-
-#define EIGHTH_BUFLEN FFT_N
-#define HALF_BUFLEN (EIGHTH_BUFLEN*4)
-#define FULL_BUFLEN (HALF_BUFLEN*2)
 
 ////////////////////////////////////////////////////////
 
@@ -72,13 +47,23 @@ void getSoundData(SoundData_t * data, bool getSPLdata, bool getMaxAmpData);
 
 //////////////////////////////////////////////////////////////////////
 
-#define MIC_SETTLING_PERIOD_MS 1500
+// Define the exact I2S frequency
+#if (I2S_AUDIOFREQ == I2S_AUDIOFREQ_16K)
+	#define I2S_FREQ 15625
+#elif (I2S_AUDIOFREQ == I2S_AUDIOFREQ_32K)
+	#define I2S_FREQ 31250
+#elif (I2S_AUDIOFREQ == I2S_AUDIOFREQ_48K)
+	#define I2S_FREQ 50000
+#else
+	#error "Unknown I2S AUDIO FREQ"
+#endif
 
-//////////////////////////////////////////////////////////////////////
+#define EIGHTH_BUFLEN FFT_N
+#define HALF_BUFLEN (EIGHTH_BUFLEN*4)
+#define FULL_BUFLEN (HALF_BUFLEN*2)
 
-// found the following settling period by considering settling time of the IIR filter.
-// assumes that the startup period of the mic has already ended (can be ~1.5 seconds).
-// the timeout is the time for receiving a half DMA buffer of data, plus a 20% safety margin, then rounded up to nearest ms
+// Find the time period for the settling of the amplitude filter, as
+// a multiple of the half-DMA buffer fill time.
 #if (I2S_FREQ == 31250)
 	#if (FFT_N == 256)
 		#define N_AMP_SETTLE_HALF_PERIODS 10

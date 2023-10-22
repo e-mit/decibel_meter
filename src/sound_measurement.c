@@ -9,6 +9,8 @@
 #include "sound_LUTs.h"
 #include "math.h"
 
+#define BIT_ROUNDING_MARGIN 4
+
 /* Conversion of microphone digital output to sound pressure.
    This depends on the microphone sensitivity (S) and the
    output data bitdepth (N).
@@ -24,13 +26,14 @@ const float ik_mPa = 3.3638e-3;
 const int32_t dBscale_int = -15;
 const int32_t dBscale_frac = -5;
 
-
-extern void print(const char* format, ...);
+// This function must be supplied externally:
 extern void errorHandler(const char * func, uint32_t line, const char * file);
+
 #ifdef DEBUG_PRINT
 	// Debug data will be printed over the serial port
-    extern void printU64hex(uint64_t x);
-    #define TEST_LENGTH_SAMPLES 20
+	extern void print(const char* format, ...);  // Supply this function externally
+    extern void printU64hex(uint64_t x);  // Supply this function externally
+    #define TEST_LENGTH_SAMPLES 20  // How many sound samples to print
 #endif
 
 ////////////////////////////////////////////////

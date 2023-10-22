@@ -18,7 +18,9 @@ DMA_HandleTypeDef dma1;
 
 // Call this as: errorHandler(__func__, __LINE__, __FILE__);
 void errorHandler(const char * func, uint32_t line, const char * file) {
-	print("Error in %s at line %u in file: %s\n", func, line, file);
+	#ifdef DEBUG_PRINT
+		print("Error in %s at line %u in file: %s\n", func, line, file);
+	#endif
 	while (true) {
 	}
 }
