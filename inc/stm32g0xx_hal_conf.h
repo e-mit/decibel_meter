@@ -1,6 +1,26 @@
+/**
+  ******************************************************************************
+  * @file    stm32g0xx_hal_conf.h
+  * @author  MCD Application Team
+  * @brief   HAL configuration file.
+  ******************************************************************************
+  * @attention
+  *
+  * <h2><center>&copy; Copyright (c) 2018 STMicroelectronics.
+  * All rights reserved.</center></h2>
+  *
+  * This software component is licensed by ST under BSD 3-Clause license,
+  * the "License"; You may not use this file except in compliance with the
+  * License. You may obtain a copy of the License at:
+  *                        opensource.org/licenses/BSD-3-Clause
+  *
+  ******************************************************************************
+  */
+
 #ifndef STM32G0xx_HAL_CONF_H
 #define STM32G0xx_HAL_CONF_H
 
+// This is the list of modules to be used in the HAL driver
 #define HAL_MODULE_ENABLED
 #define HAL_I2S_MODULE_ENABLED
 #define HAL_TIM_MODULE_ENABLED
@@ -12,6 +32,7 @@
 #define HAL_PWR_MODULE_ENABLED
 #define HAL_CORTEX_MODULE_ENABLED
 
+// This is the list of modules where register callback can be used
 #define USE_HAL_ADC_REGISTER_CALLBACKS    0u
 #define USE_HAL_CEC_REGISTER_CALLBACKS    0u
 #define USE_HAL_COMP_REGISTER_CALLBACKS   0u

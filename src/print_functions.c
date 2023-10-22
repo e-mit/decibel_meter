@@ -1,9 +1,10 @@
+// Functions for printing text/data to an unspecified output device.
+
 #include <string.h>
 #include <stdio.h>
 #include <stdint.h>
 #include <stdarg.h>
 #include <stdlib.h>
-#include "project_config.h"
 #include "print_functions.h"
 
 extern void printString(char * str, uint16_t len); // this must be supplied in external code
