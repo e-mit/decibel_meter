@@ -129,7 +129,8 @@ bool UART_Init(void) {
 
 // Initialize TIMER3 but do not start it.
 // Return bool success.
-bool TIM3_Init(void) {
+bool TIM3_Init(TIM_HandleTypeDef ** pHandle) {
+	pHandle[0] = &settleTimer;
 	TIM_ClockConfigTypeDef sClockSourceConfig = {0};
 	TIM_MasterConfigTypeDef sMasterConfig = {0};
 	settleTimer.Instance = TIM3;

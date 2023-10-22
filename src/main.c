@@ -18,11 +18,9 @@ int main(void) {
 		errorHandler(__func__, __LINE__, __FILE__);
 	}
 
-	if (!TIM3_Init()) {
+	if (!soundInit(&i2s1, TIM3_Init)) {
 		errorHandler(__func__, __LINE__, __FILE__);
 	}
-
-	soundInit(&i2s1, &settleTimer);
 
 	if (!I2S1_Init()) {
 		errorHandler(__func__, __LINE__, __FILE__);
