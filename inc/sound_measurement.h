@@ -3,6 +3,7 @@
 
 #include <stdbool.h>
 #include "project_config.h"
+#include "stm32g0xx_hal.h"
 
 #define BIT_ROUNDING_MARGIN 4
 
@@ -61,7 +62,7 @@ typedef struct __attribute__((packed)) {
 ////////////////////////////////////////////////////////
 // User interface functions:
 
-bool soundInit(void);
+bool soundInit(TIM_HandleTypeDef * pTimer);
 bool enableMicrophone(bool bEnable);
 void clearMaximumAmplitude(void);
 void enableSPLcalculation(bool bEnable);
@@ -70,10 +71,7 @@ void getSoundData(SoundData_t * data, bool getSPLdata, bool getMaxAmpData);
 
 //////////////////////////////////////////////////////////////////////
 
-#define TMR3_RES_FREQ_KHZ 1  // sets resolution
-#define TMR3_PERIOD_MS 1500
-#define TMR3_PERIOD ((TMR3_RES_FREQ_KHZ*TMR3_PERIOD_MS)-1)
-#define TMR3_PRESCALER ((SYSCLK_FREQ_HZ/(1000*TMR3_RES_FREQ_KHZ))-1)
+#define MIC_SETTLING_PERIOD_MS 1500
 
 //////////////////////////////////////////////////////////////////////
 

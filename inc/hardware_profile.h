@@ -9,6 +9,7 @@
 #include <stdint.h>
 #include "stm32g0xx_hal.h"
 #include <stdbool.h>
+#include "sound_measurement.h"
 
 // UART
 
@@ -50,12 +51,22 @@
 
 ///////////////////////////////////////////////////////////////////////
 
+// TIMER3
+
+#define TMR3_RES_FREQ_KHZ 1  // sets resolution
+#define TMR3_PERIOD ((TMR3_RES_FREQ_KHZ*MIC_SETTLING_PERIOD_MS)-1)
+#define TMR3_PRESCALER ((SYSCLK_FREQ_HZ/(1000*TMR3_RES_FREQ_KHZ))-1)
+
+///////////////////////////////////////////////////////////////////////
+
 extern DMA_HandleTypeDef hdma_spi1_rx;
+extern TIM_HandleTypeDef settleTimer;
 
 void GPIO_Init(void);
 void errorHandler(const char * func, uint32_t line, const char * file);
 bool SystemClock_Config(void);
 bool UART_Init(void);
 void printString(char * str, uint16_t len);
+bool TIM3_Init(void);
 
 #endif

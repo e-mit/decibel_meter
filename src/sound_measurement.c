@@ -50,7 +50,8 @@ static volatile uint16_t dmaBuffer[FULL_BUFLEN] = {0}; // holds raw uint16s rece
 static volatile int32_t dataBuffer[EIGHTH_BUFLEN] = {0}; // holds final 24-bit sound data from half of the DMA
 I2S_HandleTypeDef hi2s1;
 DMA_HandleTypeDef hdma_spi1_rx;
-static TIM_HandleTypeDef htim3;
+// Peripheral hardware handles:
+static TIM_HandleTypeDef * pSettleTimer;
 
 // Counter used to ignore the maximum amplitude for the first
 // N_AMP_SETTLE_PERIODS half-DMA interrupts, allowing the filter to settle.
@@ -69,7 +70,6 @@ static volatile uint32_t amplitudeSettlingPeriods = 0;
 static void DMA_Init(void);
 static bool I2S1_Init(void);
 static bool startMicSettlingPeriod(void);
-static bool TIM3_Init(void);
 static void decodeI2SdataLch(const uint16_t * inBuf, const uint32_t inBuflen, int32_t * outBuf);
 static void processHalfDMAbuffer(uint32_t halfBufferStart);
 static void calculateSPLQ31(void);
@@ -172,10 +172,10 @@ void DMA1_Channel1_IRQHandler(void) {
 
 // Initialize hardware for reading out the microphone: DMA, Timer, I2S.
 // Return bool success.
-bool soundInit(void) {
+bool soundInit(TIM_HandleTypeDef * pTimer) {
+	pSettleTimer = pTimer;
 	DMA_Init();
-	bool ok = TIM3_Init();
-	return (ok && I2S1_Init());
+	return I2S1_Init();
 }
 
 // Initialize I2S but do not enable it.
@@ -210,8 +210,8 @@ void clearMaximumAmplitude(void) {
 // This is output with the data for advice only: all functions still operate as
 // normal during this period.
 static bool startMicSettlingPeriod(void) {
-	__HAL_TIM_SetCounter(&htim3,0);
-	if (HAL_TIM_Base_Start(&htim3) != HAL_OK) {
+	__HAL_TIM_SetCounter(pSettleTimer, 0);
+	if (HAL_TIM_Base_Start(pSettleTimer) != HAL_OK) {
 		return false;
 	}
 	return true;
@@ -219,46 +219,11 @@ static bool startMicSettlingPeriod(void) {
 
 // See whether the warmup/settling time has finished
 static bool micSettlingComplete(void) {
-	bool complete = __HAL_TIM_GET_FLAG(&htim3, TIM_SR_UIF);
+	bool complete = __HAL_TIM_GET_FLAG(pSettleTimer, TIM_SR_UIF);
 	if (complete) {
-		HAL_TIM_Base_Stop(&htim3);
+		HAL_TIM_Base_Stop(pSettleTimer);
 	}
 	return complete;
-}
-
-// Initialize TIMER3 but do not start it.
-// Return bool success.
-static bool TIM3_Init(void) {
-	TIM_ClockConfigTypeDef sClockSourceConfig = {0};
-	TIM_MasterConfigTypeDef sMasterConfig = {0};
-	htim3.Instance = TIM3;
-	#if (TMR3_PRESCALER > 65535)
-		#error("TMR3 prescaler must be a 16-bit number")
-	#endif
-	htim3.Init.Prescaler = TMR3_PRESCALER;
-	htim3.Init.CounterMode = TIM_COUNTERMODE_UP;
-	#if (TMR3_PERIOD > 65535)
-		#error("TMR3 period must be a 16-bit number")
-	#endif
-	htim3.Init.Period = TMR3_PERIOD;
-	htim3.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
-	htim3.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
-	if (HAL_TIM_Base_Init(&htim3) != HAL_OK) {
-		return false;
-	}
-	sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
-	if (HAL_TIM_ConfigClockSource(&htim3, &sClockSourceConfig) != HAL_OK) {
-		return false;
-	}
-	sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
-	sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
-	if (HAL_TIMEx_MasterConfigSynchronization(&htim3, &sMasterConfig) != HAL_OK) {
-		return false;
-	}
-
-	// Initialising the time base causes the UIF flag to get set: clear it.
-	__HAL_TIM_CLEAR_FLAG(&htim3, TIM_SR_UIF);
-	return true;
 }
 
 // Enable: starts the I2S clock, warmup timer, and DMA interrupts

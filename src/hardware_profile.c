@@ -10,6 +10,7 @@
 #include "print_functions.h"
 
 static UART_HandleTypeDef uart;
+TIM_HandleTypeDef settleTimer;
 
 ////////////////////////////////////////
 
@@ -121,6 +122,42 @@ bool UART_Init(void) {
 	if (HAL_UART_Init(&uart) != HAL_OK) {
 		return false;
 	}
+	return true;
+}
+
+
+// Initialize TIMER3 but do not start it.
+// Return bool success.
+bool TIM3_Init(void) {
+	TIM_ClockConfigTypeDef sClockSourceConfig = {0};
+	TIM_MasterConfigTypeDef sMasterConfig = {0};
+	settleTimer.Instance = TIM3;
+	#if (TMR3_PRESCALER > 65535)
+		#error("TMR3 prescaler must be a 16-bit number")
+	#endif
+	settleTimer.Init.Prescaler = TMR3_PRESCALER;
+	settleTimer.Init.CounterMode = TIM_COUNTERMODE_UP;
+	#if (TMR3_PERIOD > 65535)
+		#error("TMR3 period must be a 16-bit number")
+	#endif
+	settleTimer.Init.Period = TMR3_PERIOD;
+	settleTimer.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+	settleTimer.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+	if (HAL_TIM_Base_Init(&settleTimer) != HAL_OK) {
+		return false;
+	}
+	sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+	if (HAL_TIM_ConfigClockSource(&settleTimer, &sClockSourceConfig) != HAL_OK) {
+		return false;
+	}
+	sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+	sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+	if (HAL_TIMEx_MasterConfigSynchronization(&settleTimer, &sMasterConfig) != HAL_OK) {
+		return false;
+	}
+
+	// Initialising the time base causes the UIF flag to get set: clear it.
+	__HAL_TIM_CLEAR_FLAG(&settleTimer, TIM_SR_UIF);
 	return true;
 }
 
