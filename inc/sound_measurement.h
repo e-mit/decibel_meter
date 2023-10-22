@@ -3,6 +3,7 @@
 
 #include <stdbool.h>
 #include "stm32g0xx_hal.h"
+#include "sound_LUTs.h"
 
 // Sound settings
 #define MIC_SETTLING_PERIOD_MS 1500
@@ -16,13 +17,6 @@
 						// and average, then start again.
 
 ////////////////////////////////////////////////////////
-
-// Frequency bands for sound level measurement
-#define SOUND_FREQ_BANDS 6
-static const uint16_t sound_band_mids_Hz[SOUND_FREQ_BANDS] = {125, 250, 500, 1000, 2000, 4000};
-static const uint16_t sound_band_edges_Hz[SOUND_FREQ_BANDS+1] = {88, 177, 354, 707, 1414, 2828, 5657};
-
-///////////////////////////////////////////////////////////
 
 typedef struct __attribute__((packed)) {
   uint8_t  SPL_dBA_int;

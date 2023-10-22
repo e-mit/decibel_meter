@@ -1,29 +1,26 @@
+// Constants used for calculating sound pressure levels (SPL), including A-weighting.
+
 #ifndef SOUND_LUTS_H
 #define SOUND_LUTS_H
 
 #include <stdint.h>
 #include <arm_math.h>
 
-// NOTE: if changing this number, need to redo the bandID LUTs
-#define SOUND_FREQ_BANDS 6 // using the 8 standard octave bands, excluding the 1st and last
+/* The constants defined in this file are:
+ - sound_band_edges_Hz, sound_band_mids_Hz = Define the frequency bands for sound level measurement
+ - sqWsc_FsX_Y[] = scaled, squared A-weightings (scaled to fit in uint16s)
+   To reverse the scaling, multiply by the scaling factor "SF", which is provided in the form 10*log10(SF).
+ - tenlog10SF_FsX_Y = the scaling factor for the above, supplied as a float and in integer,fractional form
+ - bandIDs_FsX_Y[] = gives the octave band index number from 0 to (SOUND_FREQ_BANDS-1) or a
+                     value of SOUND_FREQ_BANDS to indicate not in any band. Length = Y/2.
+   Where X = actual audio sample frequency in Hz and Y = FFT length.
+   The constants are supplied for 9 combinations of X and Y.
+*/
 
-/* The 3 objects in this file are:
- * sqWsc_FsX_Y[] = scaled, squared A-weightings (scaled to fit all in uint16s)
- * To reverse the scaling, multiply by scaleFactor, SF, which is provided as the value 10*log10(SF).
- * tenlog10SF_FsX_Y = the scaling factor for the above
- * bandIDs_FsX_Y[] = gives the octave band index number from 0 -> (SOUND_FREQ_BANDS-1)
- * 					 or a value of SOUND_FREQ_BANDS to indicate not in a band.
- * Where X = actual audio Fs in Hz and Y = FFT length (Po2)
+#define SOUND_FREQ_BANDS 6
 
-// bandIDs array stores the octave freq band index from 0->(SOUND_FREQ_BANDS-1) for each FFT bin
-// OR if the value "SOUND_FREQ_BANDS" is stored, this indicates that the FFT bin does not
-// correspond to any freq band. Note that there are 8 standard bands (not dependent on Fs or FFT-N)
-// but the first and last are rejected due to being too low/high in frequency.
-// (note that Fs and FFT-N do dictate the low freq detection cutoff, e.g. Fs=16000, N=128, fc = 125 Hz)
- *  The bands are:
-//  band_edges = [88.388    176.776    353.553    707.105   1414.212   2828.425   5656.852]
-//   band_mids = [125.00    250.00    500.00   1000.00   2000.00   4000.00]
- */
+extern const uint16_t sound_band_mids_Hz[];
+extern const uint16_t sound_band_edges_Hz[];
 
 extern const float32_t tenlog10SF_Fs31250_1024;
 extern const int32_t tenlog10SF_int_Fs31250_1024;
