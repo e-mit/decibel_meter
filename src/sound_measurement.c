@@ -7,6 +7,7 @@
 #include <stdbool.h>
 #include "stm32g0xx_hal.h"
 #include "sound_LUTs.h"
+#include "sound_LUT_select.h"
 #include "math.h"
 #include "microphone_constants.h" // Supply this to define the microphone response
 
@@ -290,78 +291,6 @@ void HAL_I2S_ErrorCallback(I2S_HandleTypeDef *hi2s) {
 static void calculateSPLQ31(void) {
 	static q31_t FFTdata[2*FFT_N] = {0}; // interleaved complex, so need 2x number of elements.
 
-	// provide constants which depend on length of FFT/input sample and Fs
-	#if (I2S_FREQ == 50000)
-		#if (FFT_N == 256)
-			arm_cfft_instance_q31 S = arm_cfft_sR_q31_len256;
-			const uint16_t * sqWsc = sqWsc_Fs50000_256;
-			const int32_t tenlog10SF_int = tenlog10SF_int_Fs50000_256;
-			const int32_t tenlog10SF_frac = tenlog10SF_frac_Fs50000_256;
-			const uint8_t * bandIDs = bandIDs_Fs50000_256;
-		#elif (FFT_N == 512)
-			arm_cfft_instance_q31 S = arm_cfft_sR_q31_len512;
-			const uint16_t * sqWsc = sqWsc_Fs50000_512;
-			const int32_t tenlog10SF_int = tenlog10SF_int_Fs50000_512;
-			const int32_t tenlog10SF_frac = tenlog10SF_frac_Fs50000_512;
-			const uint8_t * bandIDs = bandIDs_Fs50000_512;
-		#else
-			#error("N-points and/or Fs not implemented yet")
-		#endif
-	#elif (I2S_FREQ == 31250)
-		#if (FFT_N == 128)
-			#warning("This choice of FFT_N and I2S_FREQ results in NO signal in the lowest octave band")
-			arm_cfft_instance_q31 S = arm_cfft_sR_q31_len128;
-			const uint16_t * sqWsc = sqWsc_Fs31250_128;
-			const int32_t tenlog10SF_int = tenlog10SF_int_Fs31250_128;
-			const int32_t tenlog10SF_frac = tenlog10SF_frac_Fs31250_128;
-			const uint8_t * bandIDs = bandIDs_Fs31250_128;
-		#elif (FFT_N == 256)
-			arm_cfft_instance_q31 S = arm_cfft_sR_q31_len256;
-			const uint16_t * sqWsc = sqWsc_Fs31250_256;
-			const int32_t tenlog10SF_int = tenlog10SF_int_Fs31250_256;
-			const int32_t tenlog10SF_frac = tenlog10SF_frac_Fs31250_256;
-			const uint8_t * bandIDs = bandIDs_Fs31250_256;
-		#elif (FFT_N == 512)
-			arm_cfft_instance_q31 S = arm_cfft_sR_q31_len512;
-			const uint16_t * sqWsc = sqWsc_Fs31250_512;
-			const int32_t tenlog10SF_int = tenlog10SF_int_Fs31250_512;
-			const int32_t tenlog10SF_frac = tenlog10SF_frac_Fs31250_512;
-			const uint8_t * bandIDs = bandIDs_Fs31250_512;
-		#elif (FFT_N == 1024)
-			arm_cfft_instance_q31 S = arm_cfft_sR_q31_len1024;
-			const uint16_t * sqWsc = sqWsc_Fs31250_1024;
-			const int32_t tenlog10SF_int = tenlog10SF_int_Fs31250_1024;
-			const int32_t tenlog10SF_frac = tenlog10SF_frac_Fs31250_1024;
-			const uint8_t * bandIDs = bandIDs_Fs31250_1024;
-		#else
-			#error("N-points and/or Fs not implemented yet")
-		#endif
-	#elif (I2S_FREQ == 15625)
-		#if (FFT_N == 128)
-			arm_cfft_instance_q31 S = arm_cfft_sR_q31_len128;
-			const uint16_t * sqWsc = sqWsc_Fs15625_128;
-			const int32_t tenlog10SF_int = tenlog10SF_int_Fs15625_128;
-			const int32_t tenlog10SF_frac = tenlog10SF_frac_Fs15625_128;
-			const uint8_t * bandIDs = bandIDs_Fs15625_128;
-		#elif (FFT_N == 256)
-			arm_cfft_instance_q31 S = arm_cfft_sR_q31_len256;
-			const uint16_t * sqWsc = sqWsc_Fs15625_256;
-			const int32_t tenlog10SF_int = tenlog10SF_int_Fs15625_256;
-			const int32_t tenlog10SF_frac = tenlog10SF_frac_Fs15625_256;
-			const uint8_t * bandIDs = bandIDs_Fs15625_256;
-		#elif (FFT_N == 512)
-			arm_cfft_instance_q31 S = arm_cfft_sR_q31_len512;
-			const uint16_t * sqWsc = sqWsc_Fs15625_512;
-			const int32_t tenlog10SF_int = tenlog10SF_int_Fs15625_512;
-			const int32_t tenlog10SF_frac = tenlog10SF_frac_Fs15625_512;
-			const uint8_t * bandIDs = bandIDs_Fs15625_512;
-		#else
-			#error("N-points and/or Fs not implemented yet")
-		#endif
-	#else
-		#error("N-points and/or Fs not implemented yet")
-	#endif
-
 	// Find max, min values of the input data
 	int32_t max, min;
 	findMinMax(&min, &max, (int32_t *) dataBuffer, FFT_N);
@@ -390,7 +319,7 @@ static void calculateSPLQ31(void) {
 	#endif
 
 	// Calculate the FFT; the output is internally divided by FFT_N (number of points)
-	arm_cfft_q31(&S, FFTdata, 0, 1);
+	arm_cfft_q31(fftInstance, FFTdata, 0, 1);
 
 	#ifdef DEBUG_PRINT
 		print("Raw FFT output:\n");
@@ -460,7 +389,7 @@ static void calculateSPLQ31(void) {
 
 	// Add on the dB terms accounting for the microphone parameters
 	// and (only for the A-weighted SPL) the weighting scale factor
-	scaleSPL(sumSq, dBscale_int, dBscale_frac, tenlog10SF_int, tenlog10SF_frac,
+	scaleSPL(sumSq, dBscale_int, dBscale_frac, *tenlog10SF_int, *tenlog10SF_frac,
 			 (int32_t *) &SPL_int, (int32_t *) &SPL_frac_1dp);
 	for (uint32_t i=0; i<SOUND_FREQ_BANDS; i++) {
 		scaleSPL(bandSum[i], dBscale_int, dBscale_frac, 0, 0,
@@ -533,20 +462,6 @@ static uint32_t getFilteredMaxAmplitudeQ31(const int32_t * data, const uint32_t 
 										   bool reset, bool updateMaxAmpFollower) {
 	static q31_t filtered = 0;
 	static q31_t lastData = 0;
-	// Want a filter with cutoff of fc = 10Hz. The coefficients depend on Fs according to:
-	// b = exp(-2.pi.(1/Fs).fc)
-	// a0 = (1+b)/2
-	// a1 = -a0
-	// Then convert to Q31 by dividing by 2^-31 and then rounding.
-	#if (I2S_AUDIOFREQ == I2S_AUDIOFREQ_16K)
-		q31_t a0 = 2143174546, b = 2138865443;
-	#elif (I2S_AUDIOFREQ == I2S_AUDIOFREQ_32K)
-		q31_t a0 = 2145326931, b = 2143170214;
-	#elif (I2S_AUDIOFREQ == I2S_AUDIOFREQ_48K)
-		q31_t a0 = 2146135192, b = 2144786735;
-	#else
-		#error "Undefined I2S AUDIO FREQ"
-	#endif
 
 	if (reset) {
 		// Reset the state of the digital filter; e.g. if the mic has been disabled then re-enabled.
@@ -567,14 +482,11 @@ static uint32_t getFilteredMaxAmplitudeQ31(const int32_t * data, const uint32_t 
 		// D = A+B is: arm_add_q31(&A, &B, &D, 1);
 
 		// Now do the filter calculation:
-		// filtered = (a0*fx) + (a1*lastData) + (b*filtered);
-		// BUT NOTE that since a1 = -a0 this becomes:
-		// filtered = (a0*(fx - lastData)) + (b*filtered)
 		q31_t r1, r2, r3;
 		lastData = -lastData;
 		arm_add_q31(&fx, &lastData, &r1, 1); // r1 = fx - lastData
-		arm_mult_q31(&a0, &r1, &r2, 1);      // r2 = a0*r1
-		arm_mult_q31(&b, &filtered, &r3, 1); // r3 = b*filtered
+		arm_mult_q31((q31_t *) &a0, &r1, &r2, 1);      // r2 = a0*r1
+		arm_mult_q31((q31_t *) &b, &filtered, &r3, 1); // r3 = b*filtered
 		arm_add_q31(&r2, &r3, &filtered, 1); // filtered = r2 + r3
 
 		lastData = fx;

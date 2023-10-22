@@ -38,43 +38,4 @@ void enableSPLcalculation(bool bEnable);
 volatile bool isSPLcalcComplete(void);
 void getSoundData(SoundData_t * data, bool getSPLdata, bool getMaxAmpData);
 
-//////////////////////////////////////////////////////////////////////
-
-// Define the exact I2S frequency
-#if (I2S_AUDIOFREQ == I2S_AUDIOFREQ_16K)
-	#define I2S_FREQ 15625
-#elif (I2S_AUDIOFREQ == I2S_AUDIOFREQ_32K)
-	#define I2S_FREQ 31250
-#elif (I2S_AUDIOFREQ == I2S_AUDIOFREQ_48K)
-	#define I2S_FREQ 50000
-#else
-	#error "Unknown I2S AUDIO FREQ"
-#endif
-
-// Find the time period for the settling of the amplitude filter, as
-// a multiple of the half-DMA buffer fill time.
-#if (I2S_FREQ == 31250)
-	#if (FFT_N == 256)
-		#define N_AMP_SETTLE_HALF_PERIODS 10
-	#elif (FFT_N == 512)
-		#define N_AMP_SETTLE_HALF_PERIODS 5
-	#elif (FFT_N == 1024)
-		#define N_AMP_SETTLE_HALF_PERIODS 3
-	#else
-		#error("N-points and/or Fs not implemented yet")
-	#endif
-#elif (I2S_FREQ == 15625)
-	#if (FFT_N == 128)
-		#define N_AMP_SETTLE_HALF_PERIODS 10
-	#elif (FFT_N == 256)
-		#define N_AMP_SETTLE_HALF_PERIODS 5
-	#elif (FFT_N == 512)
-		#define N_AMP_SETTLE_HALF_PERIODS 3
-	#else
-		#error("N-points and/or Fs not implemented yet")
-	#endif
-#else
-	#error("N-points and/or Fs not implemented yet")
-#endif
-
 #endif
