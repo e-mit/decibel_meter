@@ -69,6 +69,6 @@ bool SystemClock_Config(void);
 bool UART_Init(void);
 void printString(char * str, uint16_t len);
 bool TIM3_Init(TIM_HandleTypeDef ** pHandle);
-bool I2S1_Init(void);
+bool I2S1_Init(I2S_HandleTypeDef ** pHandle);
 
 #endif

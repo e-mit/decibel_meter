@@ -172,10 +172,10 @@ void DMA1_Channel1_IRQHandler(void) {
 
 // Initialize hardware for reading out the microphone: DMA, Timer, I2S.
 // Return bool success.
-bool soundInit(I2S_HandleTypeDef * I2Shandle, bool (*tmrInit)(TIM_HandleTypeDef **)) {
-	hI2S = I2Shandle;
-	bool ok = (*tmrInit)(&hSettleTimer);
+bool soundInit(bool (*I2SInit)(I2S_HandleTypeDef **), bool (*tmrInit)(TIM_HandleTypeDef **)) {
 	DMA_Init();
+	bool ok = (*I2SInit)(&hI2S);
+	ok = ok && (*tmrInit)(&hSettleTimer);
 	return ok;
 }
 

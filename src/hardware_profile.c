@@ -165,7 +165,8 @@ bool TIM3_Init(TIM_HandleTypeDef ** pHandle) {
 
 // Initialize I2S but do not enable it.
 // Return bool success.
-bool I2S1_Init(void) {
+bool I2S1_Init(I2S_HandleTypeDef ** pHandle) {
+	pHandle[0] = &i2s1;
 	i2s1.Instance = SPI1;
 	i2s1.Init.Mode = I2S_MODE_MASTER_RX;
 	i2s1.Init.Standard = I2S_STANDARD_PHILIPS;
