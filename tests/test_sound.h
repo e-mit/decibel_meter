@@ -1,4 +1,12 @@
-#include "test_sound.h"
+#ifndef TEST_SOUND_H
+#define TEST_SOUND_H
+
+// test data for verifying the 10log10 function:
+#define Ntest_inputs_10log10 20
+extern const uint64_t testInputs[];
+// these are the expected values of 10*log10(testInputs), given to 1.d.p
+extern const float testTrueOutputs[];
+/////////////////////////////////////////
 
 const uint64_t testInputs[Ntest_inputs_10log10] = {11170, 51992, 242002, 1126424,
 5243060, 24404378, 113592759, 528729520, 2461027526, 11455113150, 53319036834,
@@ -24,6 +32,21 @@ volatile bool autoStopI2S = false;
 volatile uint32_t nspl = 0;
 volatile int32_t SPL_intBuf[N_SPL_SAVE] = {0}; // this will save the first N_SPL_SAVE SPL values
 
+
+// to get an array (FFT_N values) of amplitude data after a specific number of half-buffers have elapsed:
+// 1) MUST disable SPL_calc because this overwrites the dataBuffer array
+// 2) set autoStopI2S = true
+// 3) set global variable "NhalfBufLimit" to the desired number
+// 4) enable I2S.
+// 5) Then use this function to check for completion and to get the array of extracted values.
+int32_t * stopI2S_afterNhalfBuffers(void) {
+	if (NhalfBuffersCmpltd >= NhalfBufLimit) {
+		return (int32_t *) dataBuffer;
+	}
+	else {
+		return NULL;
+	}
+}
 
 bool soundUnitTests(void) {
 
@@ -398,3 +421,4 @@ bool soundUnitTests(void) {
 	return testsOK;
 }
 
+#endif
