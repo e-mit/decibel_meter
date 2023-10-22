@@ -12,6 +12,7 @@
 static UART_HandleTypeDef uart;
 TIM_HandleTypeDef settleTimer;
 I2S_HandleTypeDef i2s1;
+DMA_HandleTypeDef dma1;
 
 ////////////////////////////////////////
 
@@ -175,6 +176,16 @@ bool I2S1_Init(I2S_HandleTypeDef ** pHandle) {
 	i2s1.Init.AudioFreq = I2S_AUDIOFREQ;
 	i2s1.Init.CPOL = I2S_CPOL_LOW;
 	return (HAL_I2S_Init(&i2s1) == HAL_OK);
+}
+
+// Initialize DMA but do not enable DMA interrupts.
+void DMA_Init(DMA_HandleTypeDef ** pHandle) {
+	pHandle[0] = &dma1;
+	__HAL_RCC_DMA1_CLK_ENABLE();
+	#if ((DMA_IRQ_PRIORITY > 3)||(DMA_IRQ_PRIORITY<0))
+		#error("Interrupt priority must be 0-3")
+	#endif
+	HAL_NVIC_SetPriority(DMA1_Channel1_IRQn, DMA_IRQ_PRIORITY, 0);
 }
 
 

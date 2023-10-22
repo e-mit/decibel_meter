@@ -59,7 +59,7 @@
 
 ///////////////////////////////////////////////////////////////////////
 
-extern DMA_HandleTypeDef hdma_spi1_rx;
+extern DMA_HandleTypeDef dma1;
 extern TIM_HandleTypeDef settleTimer;
 extern I2S_HandleTypeDef i2s1;
 
@@ -70,5 +70,6 @@ bool UART_Init(void);
 void printString(char * str, uint16_t len);
 bool TIM3_Init(TIM_HandleTypeDef ** pHandle);
 bool I2S1_Init(I2S_HandleTypeDef ** pHandle);
+void DMA_Init(DMA_HandleTypeDef ** pHandle);
 
 #endif

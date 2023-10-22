@@ -52,7 +52,8 @@ static volatile int32_t dataBuffer[EIGHTH_BUFLEN] = {0}; // holds final 24-bit s
 // Handles for peripherals:
 static TIM_HandleTypeDef * hSettleTimer;
 static I2S_HandleTypeDef * hI2S;
-DMA_HandleTypeDef hdma_spi1_rx;
+static DMA_HandleTypeDef * hDMA;
+static IRQn_Type DMA_Channel_IRQn;
 
 // Counter used to ignore the maximum amplitude for the first
 // N_AMP_SETTLE_PERIODS half-DMA interrupts, allowing the filter to settle.
@@ -68,7 +69,6 @@ static volatile uint32_t amplitudeSettlingPeriods = 0;
 
 //////////////////////////////////////////////////////////////////////////////
 
-static void DMA_Init(void);
 static bool startMicSettlingPeriod(void);
 static void decodeI2SdataLch(const uint16_t * inBuf, const uint32_t inBuflen, int32_t * outBuf);
 static void processHalfDMAbuffer(uint32_t halfBufferStart);
@@ -90,7 +90,7 @@ volatile bool isSPLcalcComplete(void) {
 // DMA buffer is still being filled with I2S data.
 void getSoundData(SoundData_t * data, bool getSPLdata, bool getMaxAmpData) {
 	if (DMAintEnabled) {
-		NVIC_DisableIRQ(DMA1_Channel1_IRQn);
+		NVIC_DisableIRQ(DMA_Channel_IRQn);
 	}
 	// Use memory barrier instructions here, in case DMA interrupt had already been triggered
 	// and would execute in the next few cycles. NB: __DMB is not needed.
@@ -161,31 +161,24 @@ void getSoundData(SoundData_t * data, bool getSPLdata, bool getMaxAmpData) {
 	data->stable = micSettlingComplete();
 
 	if (DMAintEnabled) {
-		NVIC_EnableIRQ(DMA1_Channel1_IRQn);
+		NVIC_EnableIRQ(DMA_Channel_IRQn);
 	}
 	// NOTE that any pending DMA interrupt will now fire, but will take ~2 cycles to start
 }
 
 void DMA1_Channel1_IRQHandler(void) {
-	HAL_DMA_IRQHandler(&hdma_spi1_rx);
+	HAL_DMA_IRQHandler(hDMA);
 }
 
 // Initialize hardware for reading out the microphone: DMA, Timer, I2S.
-// Return bool success.
-bool soundInit(bool (*I2SInit)(I2S_HandleTypeDef **), bool (*tmrInit)(TIM_HandleTypeDef **)) {
-	DMA_Init();
+// Obtain the handles to the peripherals and return bool success.
+bool soundInit(void (*DMAInit)(DMA_HandleTypeDef **), bool (*I2SInit)(I2S_HandleTypeDef **),
+		       bool (*tmrInit)(TIM_HandleTypeDef **), IRQn_Type DMAChIRQn) {
+	(*DMAInit)(&hDMA);
+	DMA_Channel_IRQn = DMAChIRQn;
 	bool ok = (*I2SInit)(&hI2S);
 	ok = ok && (*tmrInit)(&hSettleTimer);
 	return ok;
-}
-
-// Initialize DMA but do not enable DMA interrupts.
-static void DMA_Init(void) {
-	__HAL_RCC_DMA1_CLK_ENABLE();
-	#if ((DMA_IRQ_PRIORITY > 3)||(DMA_IRQ_PRIORITY<0))
-		#error("Interrupt priority must be 0-3")
-	#endif
-	HAL_NVIC_SetPriority(DMA1_Channel1_IRQn, DMA_IRQ_PRIORITY, 0);
 }
 
 // Call this from external code to clear the maximum amplitude value.
@@ -228,13 +221,12 @@ bool enableMicrophone(bool bEnable) {
 		}
 		clearMaximumAmplitude();
 		amplitudeSettlingPeriods = 0;
-		__HAL_DMA_CLEAR_FLAG(&hdma_spi1_rx, DMA_ISR_TCIF1 | DMA_ISR_HTIF1 | DMA_ISR_TEIF1 | DMA_ISR_GIF1);
-		NVIC_EnableIRQ(DMA1_Channel1_IRQn);
+		NVIC_EnableIRQ(DMA_Channel_IRQn);
 		DMAintEnabled = true;
 		micEnabled = true;
 	}
 	else {
-		NVIC_DisableIRQ(DMA1_Channel1_IRQn);
+		NVIC_DisableIRQ(DMA_Channel_IRQn);
 		DMAintEnabled = false;
 		enableSPLcalculation(false);
 		if (HAL_I2S_DMAStop(hI2S) != HAL_OK) {

@@ -62,7 +62,8 @@ typedef struct __attribute__((packed)) {
 ////////////////////////////////////////////////////////
 // User interface functions:
 
-bool soundInit(bool (*I2SInit)(I2S_HandleTypeDef **), bool (*tmrInit)(TIM_HandleTypeDef **));
+bool soundInit(void (*DMAInit)(DMA_HandleTypeDef **), bool (*I2SInit)(I2S_HandleTypeDef **),
+		       bool (*tmrInit)(TIM_HandleTypeDef **), IRQn_Type DMAChIRQn);
 bool enableMicrophone(bool bEnable);
 void clearMaximumAmplitude(void);
 void enableSPLcalculation(bool bEnable);
