@@ -1,6 +1,7 @@
 #include <stdbool.h>
 #include "interrupts.h"
 #include "hardware_profile.h"
+#include "stm32g0xx_hal.h"
 
 void NMI_Handler(void) {
 	errorHandler(__func__, __LINE__, __FILE__);

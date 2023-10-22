@@ -1,3 +1,8 @@
+// Hardware definition, setup and support functions.
+// This is device-dependent and defines specific pins for I/O etc.
+// Also see stm32g0xx_hal_msp.c for initialisation functions used by the
+// Hardware Abstraction Layer (HAL) MCU Support Package (MSP).
+
 #include "hardware_profile.h"
 #include "stm32g0xx_hal.h"
 #include <stdbool.h>
@@ -8,18 +13,16 @@ static UART_HandleTypeDef uart;
 
 ////////////////////////////////////////
 
-// Call as: errorHandler(__func__, __LINE__, __FILE__);
+// Call this as: errorHandler(__func__, __LINE__, __FILE__);
 void errorHandler(const char * func, uint32_t line, const char * file) {
 	print("Error in %s at line %u in file: %s\n", func, line, file);
 	while (true) {
 	}
 }
 
+// Set up all system clocks.
 bool SystemClock_Config(void) {
-
-	// Configure the main internal regulator output voltage
 	HAL_PWREx_ControlVoltageScaling(PWR_REGULATOR_VOLTAGE_SCALE1);
-
 	RCC_OscInitTypeDef RCC_OscInitStruct = {0};
 	RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
 	RCC_OscInitStruct.HSIState = RCC_HSI_ON;
@@ -73,8 +76,8 @@ bool SystemClock_Config(void) {
 	RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
 	RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK|RCC_CLOCKTYPE_PCLK1;
 
-	RCC_ClkInitStruct.AHBCLKDivider = AHB_CLK_DIV;
-	RCC_ClkInitStruct.APB1CLKDivider = APB1_CLK_DIV;
+	RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
+	RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV1;
 	#if (SYSCLK_FREQ_HZ == 16000000)
 		RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_HSI;
 		if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_0) != HAL_OK) {
@@ -102,6 +105,7 @@ bool SystemClock_Config(void) {
 	return true;
 }
 
+// Set up UART for printing general messages over serial.
 bool UART_Init(void) {
 	uart.Instance = USART4;
 	uart.Init.BaudRate = UART_BAUD;
@@ -120,6 +124,7 @@ bool UART_Init(void) {
 	return true;
 }
 
+// Provide a print interface for print_functions.
 void printString(char * str, uint16_t len) {
 	HAL_UART_Transmit(&uart, (uint8_t*)str, len, 0xFFFF);
 }

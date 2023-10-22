@@ -6,6 +6,18 @@
 
 #define BIT_ROUNDING_MARGIN 4
 
+// Sound settings
+
+#define FFT_N 128
+#define I2S_AUDIOFREQ I2S_AUDIOFREQ_16K // can be 16, 32, 48
+
+#define FILTER_SPL // if defined, SPL is averaged over N readings, then SPL calc stops.
+				   // if not defined, SPL is continuously calculated on each DMA interrupt
+				   // and can be read at any time.
+#define FILTER_SPL_N 20 // how many consecutive SPL calculations to average over
+						// NOTE: this is NOT a moving average: Accumulate N readings
+						// and average, then start again.
+
 // Interrupt priority.
 // Priority must be a number 0-3; M0+ does not use subpriorities.
 // Equal priority interrupts do not interrupt each other. Lower priorities interrupt higher ones.

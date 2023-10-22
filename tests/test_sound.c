@@ -17,6 +17,8 @@ const float testTrueOutputs[Ntest_inputs_10log10] = {40.5, 47.2, 53.8, 60.5,
 
 /////////////////////////////////////////////////////
 
+#define PASSFAIL_STR(x) (x ? "pass" : "fail")
+
 #ifdef DEBUG_AND_TESTS
 	#define NTIMES (4*2)
 	#define N_SPL_SAVE 250

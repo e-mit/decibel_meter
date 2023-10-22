@@ -1,23 +1,20 @@
+// Hardware definition, setup and support functions.
+// This is device-dependent and defines specific pins for I/O etc.
+// Also see stm32g0xx_hal_msp.c for initialisation functions used by the
+// Hardware Abstraction Layer (HAL) MCU Support Package (MSP).
+
 #ifndef HARDWARE_PROFILE_H
 #define HARDWARE_PROFILE_H
 
 #include <stdint.h>
 #include "stm32g0xx_hal.h"
-#include "project_config.h"
 #include <stdbool.h>
 
-#define AHB_CLK_DIV RCC_SYSCLK_DIV1
-#define APB1_CLK_DIV RCC_HCLK_DIV1
-
-#define PASSFAIL_STR(x) (x ? "pass" : "fail")
-
-//////////////////////////////////////////////////////////////////////////////////
-
-// UART:
+// UART
 
 #define USART4_TX_PIN GPIO_PIN_0
 #define USART4_TX_PORT GPIOA
-#define USART4_TX_GPIO_CLK_ENABLE() __HAL_RCC_GPIOA_CLK_ENABLE() // must agree with USART4_TX_PORT
+#define USART4_TX_GPIO_CLK_ENABLE() __HAL_RCC_GPIOA_CLK_ENABLE()
 
 #define USART4_RX_PIN GPIO_PIN_1
 #define USART4_RX_PORT GPIOA
@@ -30,9 +27,7 @@
 
 //////////////////////////////////////////////////////////////////////////////////
 
-extern DMA_HandleTypeDef hdma_spi1_rx;
-
-// I2S1 pins
+// I2S1
 
 // Enable an internal pulldown on the SD line so it does not float when the right audio channel is enabled
 // this removes the need for an external pulldown.
@@ -40,7 +35,7 @@ extern DMA_HandleTypeDef hdma_spi1_rx;
 
 #define I2S1_CLK_PIN GPIO_PIN_5
 #define I2S1_CLK_PORT GPIOA
-#define I2S1_CLK_GPIO_CLK_ENABLE() __HAL_RCC_GPIOA_CLK_ENABLE() // must agree with I2S1_CLK_PORT
+#define I2S1_CLK_GPIO_CLK_ENABLE() __HAL_RCC_GPIOA_CLK_ENABLE()
 #define I2S1_CLK_AF_MAP GPIO_AF0_SPI1
 
 #define I2S1_WS_PIN GPIO_PIN_4
@@ -55,7 +50,7 @@ extern DMA_HandleTypeDef hdma_spi1_rx;
 
 ///////////////////////////////////////////////////////////////////////
 
-// functions
+extern DMA_HandleTypeDef hdma_spi1_rx;
 
 void GPIO_Init(void);
 void errorHandler(const char * func, uint32_t line, const char * file);
