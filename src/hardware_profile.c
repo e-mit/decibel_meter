@@ -8,6 +8,7 @@
 #include <stdbool.h>
 #include "project_config.h"
 #include "print_functions.h"
+#include "microphone_constants.h"
 
 static UART_HandleTypeDef uart;
 TIM_HandleTypeDef settleTimer;

@@ -8,23 +8,7 @@
 #include "stm32g0xx_hal.h"
 #include "sound_LUTs.h"
 #include "math.h"
-
-#define BIT_ROUNDING_MARGIN 4
-
-/* Conversion of microphone digital output to sound pressure.
-   This depends on the microphone sensitivity (S) and the
-   output data bitdepth (N).
-	  pressure/mPa = (digital amplitude)*ik_mPa;
-	  ik_mPa = sqrt(2)/((10^((S/dB)/20))*((2^(N-1))-1))
-   e.g. If S = -26 dB and N = 24, then: ik_mPa = 3.3638e-3
-*/
-const float ik_mPa = 3.3638e-3;
-/* Decibel scale factor 'dBscale' is constant for a given microphone:
-      dBscale = 20*log10((ik_mPa/1000)/(20e-6))
-   e.g. if S = -26dB and N = 24; dBscale = -15.5 (to 1.d.p.)
-*/
-const int32_t dBscale_int = -15;
-const int32_t dBscale_frac = -5;
+#include "microphone_constants.h" // Supply this to define the microphone response
 
 // This function must be supplied externally:
 extern void errorHandler(const char * func, uint32_t line, const char * file);
@@ -37,6 +21,11 @@ extern void errorHandler(const char * func, uint32_t line, const char * file);
 #endif
 
 ////////////////////////////////////////////////
+
+#define BIT_ROUNDING_MARGIN 4
+#define EIGHTH_BUFLEN FFT_N
+#define HALF_BUFLEN (EIGHTH_BUFLEN*4)
+#define FULL_BUFLEN (HALF_BUFLEN*2)
 
 // state variables:
 static volatile bool SPL_calc_enabled = false;

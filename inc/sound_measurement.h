@@ -6,9 +6,8 @@
 #include "sound_LUTs.h"
 
 // Sound settings
-#define MIC_SETTLING_PERIOD_MS 1500
-#define FFT_N 128
-#define I2S_AUDIOFREQ I2S_AUDIOFREQ_16K // can be 16, 32, 48
+#define FFT_N 128   // FFT points; can be 128 - 1024
+#define I2S_AUDIOFREQ I2S_AUDIOFREQ_16K  // Can be 16, 32, 48
 #define FILTER_SPL // if defined: SPL is averaged over N readings, then SPL calc stops.
 				   // if not defined: SPL is continuously calculated on each DMA interrupt
 				   // and can be read at any time.
@@ -51,10 +50,6 @@ void getSoundData(SoundData_t * data, bool getSPLdata, bool getMaxAmpData);
 #else
 	#error "Unknown I2S AUDIO FREQ"
 #endif
-
-#define EIGHTH_BUFLEN FFT_N
-#define HALF_BUFLEN (EIGHTH_BUFLEN*4)
-#define FULL_BUFLEN (HALF_BUFLEN*2)
 
 // Find the time period for the settling of the amplitude filter, as
 // a multiple of the half-DMA buffer fill time.
