@@ -84,10 +84,13 @@ void test_correctIntFracNumber(void) {
 }
 
 int main(void) {
+	printf("\n#######################\n./%s\n\n",__FILE__);
     UNITY_BEGIN();
     RUN_TEST(test_efficient_10log10);
     RUN_TEST(test_correctIntFracNumber);
-    return UNITY_END();
+    int v = UNITY_END();
+    printf("-----------------------\n");
+    return v;
 }
 
 
