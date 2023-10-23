@@ -22,6 +22,9 @@ CFLAGS += -Wold-style-definition
 TARGET_BASE1=test1
 TARGET1 = $(TARGET_BASE1)$(TARGET_EXTENSION)
 SRC_FILES1=$(UNITY_ROOT)/unity.c ../src/efficient_10log10.c test_efficient_10log10.c
+TARGET_BASE2=test2
+TARGET2 = $(TARGET_BASE2)$(TARGET_EXTENSION)
+SRC_FILES2=$(UNITY_ROOT)/unity.c ../src/efficient_10log10.c ../src/sound_utilities.c test_sound_utilities.c
 INC_DIRS=-I$(UNITY_ROOT) -I../inc
 SYMBOLS=
 
@@ -29,10 +32,9 @@ all: clean default
 
 default: 
 	$(C_COMPILER) $(CFLAGS) $(INC_DIRS) $(SYMBOLS) $(SRC_FILES1) -o $(TARGET1)
+	$(C_COMPILER) $(CFLAGS) $(INC_DIRS) $(SYMBOLS) $(SRC_FILES2) -o $(TARGET2) -lm
 	- ./$(TARGET1)
+	- ./$(TARGET2)
 
 clean:
-	$(CLEANUP) $(TARGET1)
-
-ci: CFLAGS += -Werror
-ci: all
+	$(CLEANUP) $(TARGET1) $(TARGET2)
