@@ -162,14 +162,148 @@ void test_sumToIntAverage(void) {
 
 void test_findMinMax(void) {
 	//findMinMax(int32_t * min, int32_t * max, const int32_t * array, const uint32_t length);
-	int32_t min;
-	int32_t max;
 
-	int32_t array[] = {5};
+	{
+	int32_t min, max, array[] = {5};
 	findMinMax(&min, &max, array, 1);
 	TEST_ASSERT_EQUAL_INT32(5, min);
 	TEST_ASSERT_EQUAL_INT32(5, max);
+	}
+	{
+	int32_t min, max, array[] = {2, 5};
+	findMinMax(&min, &max, array, (sizeof array)/(sizeof array[0]));
+	TEST_ASSERT_EQUAL_INT32(2, min);
+	TEST_ASSERT_EQUAL_INT32(5, max);
+	}
+	{
+	int32_t min, max, array[] = {5, -2};
+	findMinMax(&min, &max, array, (sizeof array)/(sizeof array[0]));
+	TEST_ASSERT_EQUAL_INT32(-2, min);
+	TEST_ASSERT_EQUAL_INT32(5, max);
+	}
+	{
+	int32_t min, max, array[] = {-5, -2};
+	findMinMax(&min, &max, array, (sizeof array)/(sizeof array[0]));
+	TEST_ASSERT_EQUAL_INT32(-5, min);
+	TEST_ASSERT_EQUAL_INT32(-2, max);
+	}
+	{
+	int32_t min, max, array[] = {0, -2};
+	findMinMax(&min, &max, array, (sizeof array)/(sizeof array[0]));
+	TEST_ASSERT_EQUAL_INT32(-2, min);
+	TEST_ASSERT_EQUAL_INT32(0, max);
+	}
+	{
+	int32_t min, max, array[] = {5, 0};
+	findMinMax(&min, &max, array, (sizeof array)/(sizeof array[0]));
+	TEST_ASSERT_EQUAL_INT32(0, min);
+	TEST_ASSERT_EQUAL_INT32(5, max);
+	}
+	{
+	int32_t min, max, array[] = {6, 6, 6};
+	findMinMax(&min, &max, array, (sizeof array)/(sizeof array[0]));
+	TEST_ASSERT_EQUAL_INT32(6, min);
+	TEST_ASSERT_EQUAL_INT32(6, max);
+	}
+	{
+	int32_t min, max, array[] = {-1, 10, 20};
+	findMinMax(&min, &max, array, (sizeof array)/(sizeof array[0]));
+	TEST_ASSERT_EQUAL_INT32(-1, min);
+	TEST_ASSERT_EQUAL_INT32(20, max);
+	}
+	{
+	int32_t min, max, array[] = {9999, 444, 555};
+	findMinMax(&min, &max, array, (sizeof array)/(sizeof array[0]));
+	TEST_ASSERT_EQUAL_INT32(444, min);
+	TEST_ASSERT_EQUAL_INT32(9999, max);
+	}
+}
 
+void test_getPo2factor(void) {
+	// uint32_t getPo2factor(uint32_t bigVal, uint32_t smallVal)
+
+	TEST_ASSERT_EQUAL_UINT32(0, getPo2factor(2, 10));
+	TEST_ASSERT_EQUAL_UINT32(0, getPo2factor(10, 10));
+	TEST_ASSERT_EQUAL_UINT32(0, getPo2factor(11, 10));
+	TEST_ASSERT_EQUAL_UINT32(0, getPo2factor(11, 0));
+
+	TEST_ASSERT_EQUAL_UINT32(2, getPo2factor(8, 2));
+	TEST_ASSERT_EQUAL_UINT32(1, getPo2factor(8, 3));
+	TEST_ASSERT_EQUAL_UINT32(3, getPo2factor(8, 1));
+
+	TEST_ASSERT_EQUAL_UINT32(11, getPo2factor(34290, 9));
+	TEST_ASSERT_EQUAL_UINT32(14, getPo2factor(96732581, 3129));
+}
+
+void test_amplitude_DN_to_mPa(void) {
+	//void amplitude_DN_to_mPa(const uint32_t ampDN, const float ik_mPa, uint16_t * intAmp_mPa,
+	//		                 uint8_t * frac2dpAmp_mPa)
+
+	float ik_mPa = 1.23e-3;
+	uint16_t intAmp_mPa;
+	uint8_t frac2dpAmp_mPa;
+
+	amplitude_DN_to_mPa(0, ik_mPa, &intAmp_mPa, &frac2dpAmp_mPa);
+	TEST_ASSERT_EQUAL_UINT16(0, intAmp_mPa);
+	TEST_ASSERT_EQUAL_UINT8(0, frac2dpAmp_mPa);
+
+	amplitude_DN_to_mPa(3, ik_mPa, &intAmp_mPa, &frac2dpAmp_mPa);
+	TEST_ASSERT_EQUAL_UINT16(0, intAmp_mPa);
+	TEST_ASSERT_EQUAL_UINT8(0, frac2dpAmp_mPa);
+
+	amplitude_DN_to_mPa(10, ik_mPa, &intAmp_mPa, &frac2dpAmp_mPa);
+	TEST_ASSERT_EQUAL_UINT16(0, intAmp_mPa);
+	TEST_ASSERT_EQUAL_UINT8(1, frac2dpAmp_mPa);
+
+	amplitude_DN_to_mPa(100, ik_mPa, &intAmp_mPa, &frac2dpAmp_mPa);
+	TEST_ASSERT_EQUAL_UINT16(0, intAmp_mPa);
+	TEST_ASSERT_EQUAL_UINT8(12, frac2dpAmp_mPa);
+
+	amplitude_DN_to_mPa(767879, ik_mPa, &intAmp_mPa, &frac2dpAmp_mPa);
+	TEST_ASSERT_EQUAL_UINT16(944, intAmp_mPa);
+	TEST_ASSERT_EQUAL_UINT8(49, frac2dpAmp_mPa);
+}
+
+
+void test_scaleSPL(void) {
+	//	void scaleSPL(uint64_t sumSq, const int32_t dBscale_int, const int32_t dBscale_frac,
+	//			      const int32_t weightingInt, const int32_t weightingFrac,
+	//			      int32_t * SPLintegerPart, int32_t * SPLfractionalPart)
+	// Calculate: SPLvalue = (10.0*log10(sumSq)) + dBscale + weightTerm;
+
+	int32_t SPLintegerPart;
+	int32_t SPLfractionalPart;
+
+	scaleSPL(99999, 0, 0, 0, 0, &SPLintegerPart, &SPLfractionalPart);
+	TEST_ASSERT_EQUAL_INT32(50, SPLintegerPart);
+	TEST_ASSERT_EQUAL_INT32(0, SPLfractionalPart);
+
+	scaleSPL(99999, 21, 2, 0, 0, &SPLintegerPart, &SPLfractionalPart);
+	TEST_ASSERT_EQUAL_INT32(71, SPLintegerPart);
+	TEST_ASSERT_EQUAL_INT32(2, SPLfractionalPart);
+
+	scaleSPL(99999, -55, -3, 0, 0, &SPLintegerPart, &SPLfractionalPart);
+	TEST_ASSERT_EQUAL_INT32(-5, SPLintegerPart);
+	TEST_ASSERT_EQUAL_INT32(-3, SPLfractionalPart);
+
+	scaleSPL(99999, -55, -3, 20, 3, &SPLintegerPart, &SPLfractionalPart);
+	TEST_ASSERT_EQUAL_INT32(15, SPLintegerPart);
+	TEST_ASSERT_EQUAL_INT32(0, SPLfractionalPart);
+
+	scaleSPL(12522875, 28, 2, -12, -7, &SPLintegerPart, &SPLfractionalPart);
+	TEST_ASSERT_EQUAL_INT32(86, SPLintegerPart);
+	TEST_ASSERT_EQUAL_INT32(5, SPLfractionalPart);
+}
+
+void test_decodeI2SdataLch(void) {
+	// void decodeI2SdataLch(const uint16_t * inBuf, const uint32_t inBuflen, int32_t * outBuf)
+	#define NSAMP 5
+	uint16_t inBuf[NSAMP*4] = {0x7FF1, 0xE800, 0, 0, 0xB202, 0xB900, 0, 0, 65157, 16384, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0};
+	int32_t outBuf[NSAMP];
+	const int32_t outBufExpected[NSAMP] = {8385000, -5111111, -96960, 256, 0};
+	decodeI2SdataLch(inBuf, NSAMP*4, outBuf);
+	TEST_ASSERT_EQUAL_INT32_ARRAY(outBufExpected, outBuf, NSAMP);
+	#undef NSAMP
 }
 
 int main(void) {
@@ -179,6 +313,10 @@ int main(void) {
     RUN_TEST(test_float2IntFrac1dp);
     RUN_TEST(test_sumToIntAverage);
     RUN_TEST(test_findMinMax);
+    RUN_TEST(test_getPo2factor);
+    RUN_TEST(test_amplitude_DN_to_mPa);
+    RUN_TEST(test_scaleSPL);
+    RUN_TEST(test_decodeI2SdataLch);
     int v = UNITY_END();
     printf("-----------------------\n");
     return v;

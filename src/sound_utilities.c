@@ -62,7 +62,7 @@ void findMinMax(int32_t * min, int32_t * max, const int32_t * array, const uint3
 
 // Find the largest positive integer bitshift m, such that: smallVal*(2^m) <= bigVal.
 // This is the largest upward bitshift that can be applied to smallVal such
-// that it is still smaller than bigVal.
+// that it does not exceed bigVal.
 uint32_t getPo2factor(uint32_t bigVal, uint32_t smallVal) {
 	uint32_t bitShift = 0;
 	if ((bigVal < smallVal) || (smallVal == 0)) {
