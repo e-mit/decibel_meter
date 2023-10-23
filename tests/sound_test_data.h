@@ -1,3 +1,5 @@
+// Test data for system tests.
+
 #ifndef SOUND_TEST_DATA_H
 #define SOUND_TEST_DATA_H
 

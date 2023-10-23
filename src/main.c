@@ -1,3 +1,8 @@
+// Demo program for decibel sound meter project.
+// Define TESTS to run system tests, otherwise the program
+// will continually print A-weighted sound pressure level (SPL dBA)
+// and peak sound amplitude (mPa) over the serial port.
+
 #include <stdbool.h>
 #include "hardware_profile.h"
 #include "print_functions.h"
@@ -23,11 +28,7 @@ int main(void) {
 	}
 
 	#ifdef TESTS
-		print("\n\n-------------------------------------\n");
-		print("Starting system tests\n");
-		print("-------------------------------------\n\n");
 		test_sound_system();
-		print("-------------------------------------\n\n");
 	#else
 		if (!enableMicrophone(true)) {
 			errorHandler(__func__, __LINE__, __FILE__);

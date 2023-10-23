@@ -1,3 +1,13 @@
+// Convert I2S data from a microphone into A-weighted Sound Pressure Level (SPL) measurements.
+// This code is ARM/STM32-specific but is not limited to a particular device.
+//
+// Brief explanation of use:
+// 1) Initialise I2S, DMA and timer peripherals externally, then pass their handles to soundInit().
+// 2) Call enableMicrophone() to start the sound detection and processing.
+// 3) Use enableSPLcalculation(), isSPLcalcComplete() and getSoundData() to start/stop, monitor
+//    and obtain output data.
+// 4) clearMaximumAmplitude() is used to reset the peak amplitude (output in addition to SPL).
+
 #ifndef SOUND_MEASUREMENT_H
 #define SOUND_MEASUREMENT_H
 

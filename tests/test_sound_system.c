@@ -1,3 +1,5 @@
+// System tests designed to run on the target microcontroller.
+
 #include "../inc/print_functions.h"
 #include "sound_test_data.h"
 
@@ -9,6 +11,10 @@
 #define TEST_RESULT(x) print("%s\n-------------------------------------\n", x ? "PASS" : "FAIL");
 
 void test_sound_system(void) {
+	print("\n\n-------------------------------------\n");
+	print("Starting system tests\n");
+	print("-------------------------------------\n\n");
+
 	TEST_TITLE("getFilteredMaxAmplitudeQ31");
 
 	// Use the array x1_32 (length=X1_32_LEN=1024) as input data.
@@ -103,4 +109,6 @@ void test_sound_system(void) {
 	ok = ok && (fabs(theAmp - peak_amp_mPa_actual) <= AMP_TOL);
 
 	TEST_RESULT(ok);
+
+	print("-------------------------------------\n\n");
 }

@@ -1,3 +1,5 @@
+// Test data for system tests.
+
 #include "sound_test_data.h"
 #include "arm_math.h"
 #include <stdint.h>

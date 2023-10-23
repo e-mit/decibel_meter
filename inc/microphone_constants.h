@@ -5,6 +5,8 @@
 #ifndef MICROPHONE_CONSTANTS_H
 #define MICROPHONE_CONSTANTS_H
 
+// Initial period of time after power-on, during which the
+// microphone output should be considered inaccurate.
 #define MIC_SETTLING_PERIOD_MS 1500
 
 /* Conversion of microphone digital output to sound pressure.
