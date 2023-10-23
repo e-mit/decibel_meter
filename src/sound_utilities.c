@@ -99,3 +99,16 @@ void scaleSPL(uint64_t sumSq, const int32_t dBscale_int, const int32_t dBscale_f
 	// Apply correction if fractional part is not in range 0->9:
 	correctIntFracNumber(SPLintegerPart, SPLfractionalPart);
 }
+
+// Convert 24-bit I2S sound data into signed 32 bit numbers.
+// The input I2S data are split across a uint16 array, and are left-channel only.
+// inBuflen is simply the number of elements in inBuf
+void decodeI2SdataLch(const uint16_t * inBuf, const uint32_t inBuflen, int32_t * outBuf) {
+	uint32_t outCount = 0;
+	for (uint32_t i = 0; i < inBuflen; i += 4) {
+		// join MS16bits and LS16bits, then shift the result down 8 bits because it is a 24-bit
+		// value, rather than a 32-bit one.
+		outBuf[outCount] = ((int32_t) ((((uint32_t) inBuf[i]) << 16) | ((uint32_t) inBuf[i+1]))) >> 8;
+		outCount++;
+	}
+}

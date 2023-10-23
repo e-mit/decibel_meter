@@ -56,7 +56,6 @@ static volatile uint32_t amplitudeSettlingPeriods = 0;
 //////////////////////////////////////////////////////////////////////////////
 
 static bool startMicSettlingPeriod(void);
-static void decodeI2SdataLch(const uint16_t * inBuf, const uint32_t inBuflen, int32_t * outBuf);
 static void processHalfDMAbuffer(uint32_t halfBufferStart);
 static void calculateSPLQ31(void);
 static uint32_t getFilteredMaxAmplitudeQ31(const int32_t * data, const uint32_t length,
@@ -221,19 +220,6 @@ bool enableMicrophone(bool bEnable) {
 		micEnabled = false;
 	}
 	return true;
-}
-
-// Convert input raw I2S data into signed 32 bit numbers, assuming the I2S data is Left
-// channel only and the first datum starts at element 0.
-// inBuflen is simply the number of elements in inBuf
-static void decodeI2SdataLch(const uint16_t * inBuf, const uint32_t inBuflen, int32_t * outBuf) {
-	uint32_t outCount = 0;
-	for (uint32_t i = 0; i < inBuflen; i += 4) {
-		// join MS16bits and LS16bits, then shift the result down 8 bits because it is a 24-bit
-		// value, rather than a 32-bit one.
-		outBuf[outCount] = ((int32_t) ((((uint32_t) inBuf[i]) << 16) | ((uint32_t) inBuf[i+1]))) >> 8;
-		outCount++;
-	}
 }
 
 void enableSPLcalculation(bool bEnable) {

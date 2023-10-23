@@ -17,5 +17,6 @@ void amplitude_DN_to_mPa(uint32_t ampDN, const float ik_mPa, uint16_t * intAmp_m
 void scaleSPL(uint64_t sumSq, const int32_t dBscale_int, const int32_t dBscale_frac,
 		      const int32_t weightingInt, const int32_t weightingFrac,
 		      int32_t * SPLintegerPart, int32_t * SPLfractionalPart);
+void decodeI2SdataLch(const uint16_t * inBuf, const uint32_t inBuflen, int32_t * outBuf);
 
 #endif
