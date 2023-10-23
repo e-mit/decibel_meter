@@ -28,13 +28,12 @@ TARGET2 = $(TARGET_BASE2)$(TARGET_EXTENSION)
 SRC_FILES2=$(UNITY_ROOT)/unity.c ../src/efficient_10log10.c ../src/sound_utilities.c $(TARGET_BASE2).c
 
 INC_DIRS=-I$(UNITY_ROOT) -I../inc
-SYMBOLS=
 
 all: clean default
 
 default: 
-	$(C_COMPILER) $(CFLAGS) $(INC_DIRS) $(SYMBOLS) $(SRC_FILES1) -o $(TARGET1)
-	$(C_COMPILER) $(CFLAGS) $(INC_DIRS) $(SYMBOLS) $(SRC_FILES2) -o $(TARGET2) -lm
+	$(C_COMPILER) $(CFLAGS) $(INC_DIRS) $(SRC_FILES1) -o $(TARGET1)
+	$(C_COMPILER) $(CFLAGS) $(INC_DIRS) $(SRC_FILES2) -o $(TARGET2) -lm
 	- @./$(TARGET1)
 	- @./$(TARGET2)
 

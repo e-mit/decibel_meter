@@ -448,3 +448,7 @@ static uint32_t getFilteredMaxAmplitudeQ31(const int32_t * data, const uint32_t 
 }
 
 
+#ifdef TESTS
+#include "../tests/test_sound_system.c"
+#include "../tests/sound_test_data.c"
+#endif

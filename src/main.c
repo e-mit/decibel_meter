@@ -22,18 +22,26 @@ int main(void) {
 		errorHandler(__func__, __LINE__, __FILE__);
 	}
 
-	if (!enableMicrophone(true)) {
-		errorHandler(__func__, __LINE__, __FILE__);
-	}
-
-	while (true) {
-		if (simplified_readout()) {
-			clearMaximumAmplitude(); // Call this at any time
-			print("%u.%u  %u.%02u  %u\n", soundData_g.SPL_dBA_int,
-				  soundData_g.SPL_dBA_fr_1dp, soundData_g.peak_amp_mPa_int,
-				  soundData_g.peak_amp_mPa_fr_2dp, soundData_g.stable);
+	#ifdef TESTS
+		print("\n\n-------------------------------------\n");
+		print("Starting system tests\n");
+		print("-------------------------------------\n\n");
+		test_sound_system();
+		print("-------------------------------------\n\n");
+	#else
+		if (!enableMicrophone(true)) {
+			errorHandler(__func__, __LINE__, __FILE__);
 		}
-	}
+
+		while (true) {
+			if (simplified_readout()) {
+				clearMaximumAmplitude(); // Call this at any time
+				print("%u.%u  %u.%02u  %u\n", soundData_g.SPL_dBA_int,
+					  soundData_g.SPL_dBA_fr_1dp, soundData_g.peak_amp_mPa_int,
+					  soundData_g.peak_amp_mPa_fr_2dp, soundData_g.stable);
+			}
+		}
+	#endif
 	return 0;
 }
 
@@ -61,4 +69,5 @@ bool simplified_readout(void) {
 	stage = 0;
 	return false;
 }
+
 
