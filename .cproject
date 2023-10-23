@@ -737,6 +737,8 @@
                                     									
                                     <listOptionValue builtIn="false" value="STM32G071xx"/>
                                     									
+                                    <listOptionValue builtIn="false" value="TESTS"/>
+                                    									
                                     <listOptionValue builtIn="false" value="__weak=&quot;__attribute__((weak))&quot;"/>
                                     									
                                     <listOptionValue builtIn="false" value="ARM_MATH_CM0PLUS"/>

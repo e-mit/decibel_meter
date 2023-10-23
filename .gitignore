@@ -6,3 +6,4 @@
 *.out
 /unity/
 /Debug_Tests/
+/Release_Tests/
