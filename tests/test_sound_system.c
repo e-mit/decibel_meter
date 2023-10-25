@@ -30,7 +30,7 @@ void test_sound_system(void) {
 	#endif
 
 	UNUSED(getFilteredMaxAmplitudeQ31(x1_32, X1_32_LEN - NFILT, true, true));
-	volatile uint32_t filtmax = getFilteredMaxAmplitudeQ31(&(x1_32[X1_32_LEN - NFILT]), NFILT, false, true);
+	uint32_t filtmax = getFilteredMaxAmplitudeQ31(&(x1_32[X1_32_LEN - NFILT]), NFILT, false, true);
 	float pcDiff = (100.0*(((float) filtmax) - max_filt_expected))/max_filt_expected;
 	print("   filtmax = %.2f\n", ((float) filtmax));
 	print("   Abs difference = %.2f\n", ((float) filtmax) - max_filt_expected);

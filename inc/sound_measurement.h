@@ -45,7 +45,7 @@ bool soundInit(void (*DMAInit)(DMA_HandleTypeDef **), bool (*I2SInit)(I2S_Handle
 bool enableMicrophone(bool bEnable);
 void clearMaximumAmplitude(void);
 void enableSPLcalculation(bool bEnable);
-volatile bool isSPLcalcComplete(void);
+bool isSPLcalcComplete(void);
 void getSoundData(SoundData_t * data, bool getSPLdata, bool getMaxAmpData);
 
 #ifdef TESTS
