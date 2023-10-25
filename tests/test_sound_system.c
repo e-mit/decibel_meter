@@ -10,7 +10,7 @@
 #define TEST_TITLE(name) print("\nTEST: " name "\n")
 #define TEST_RESULT(x) print("%s\n-------------------------------------\n", x ? "PASS" : "FAIL");
 
-void test_sound_system(void) {
+void test_soundSystem(void) {
 	print("\n\n-------------------------------------\n");
 	print("Starting system tests\n");
 	print("-------------------------------------\n\n");

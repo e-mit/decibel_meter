@@ -10,7 +10,7 @@ void tearDown(void) {}
 #define NTEST_INPUTS 23
 
 
-void test_efficient_10log10(void) {
+void test_efficient10log10(void) {
 	const uint64_t testInputs[NTEST_INPUTS] = {596, 2178, 5591, 11170, 51992, 242002,
 			1126424, 5243060, 24404378, 113592759, 528729520, 2461027526, 11455113150,
 			53319036834, 248179101477, 1155175900896, 5376888521506, 25027296838757,
@@ -24,7 +24,7 @@ void test_efficient_10log10(void) {
 	int32_t integerPart;
 	int32_t fractionalPart;
 	for (uint32_t i = 0; i < NTEST_INPUTS; i++) {
-		efficient_10log10(testInputs[i], &integerPart, &fractionalPart);
+		efficient10log10(testInputs[i], &integerPart, &fractionalPart);
 		float result = ((float) integerPart) + (((float) fractionalPart)/10.0f);
 		TEST_ASSERT_FLOAT_WITHIN(ONE_DP_ERROR_LIMIT, testTrueOutputs[i], result);
 	}
@@ -86,7 +86,7 @@ void test_correctIntFracNumber(void) {
 int main(void) {
 	printf("\n#######################\n./%s\n\n",__FILE__);
     UNITY_BEGIN();
-    RUN_TEST(test_efficient_10log10);
+    RUN_TEST(test_efficient10log10);
     RUN_TEST(test_correctIntFracNumber);
     int v = UNITY_END();
     printf("-----------------------\n");

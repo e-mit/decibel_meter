@@ -49,7 +49,7 @@ bool isSPLcalcComplete(void);
 void getSoundData(SoundData_t * data, bool getSPLdata, bool getMaxAmpData);
 
 #ifdef TESTS
-void test_sound_system(void);
+void test_soundSystem(void);
 #endif
 
 #endif

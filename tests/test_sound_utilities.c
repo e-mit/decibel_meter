@@ -9,7 +9,7 @@ void tearDown(void) {}
 #define INTFRAC2(i, f) i##.##f
 #define INTFRAC(i, f) INTFRAC2(i, f)
 
-void test_float2IntFrac2dp(void) {
+void test_floatToIntAndFrac2dp(void) {
 	uint32_t intpart;
 	uint8_t fracpart2dp;
 	#define INTPART 35
@@ -61,7 +61,7 @@ void test_float2IntFrac2dp(void) {
 	#undef FRACPART
 }
 
-void test_float2IntFrac1dp(void) {
+void test_floatToIntAndFrac1dp(void) {
 	uint32_t intpart;
 	uint8_t fracpart2dp;
 	#define INTPART 35
@@ -235,7 +235,7 @@ void test_getPo2factor(void) {
 	TEST_ASSERT_EQUAL_UINT32(14, getPo2factor(96732581, 3129));
 }
 
-void test_amplitude_DN_to_mPa(void) {
+void test_amplitudeDN_to_mPa(void) {
 	//void amplitudeDN_to_mPa(const uint32_t ampDN, const float ik_mPa, uint16_t * intAmp_mPa,
 	//		                 uint8_t * frac2dpAmp_mPa)
 
@@ -309,12 +309,12 @@ void test_decodeI2SdataLch(void) {
 int main(void) {
 	printf("\n#######################\n./%s\n\n",__FILE__);
     UNITY_BEGIN();
-    RUN_TEST(test_float2IntFrac2dp);
-    RUN_TEST(test_float2IntFrac1dp);
+    RUN_TEST(test_floatToIntAndFrac2dp);
+    RUN_TEST(test_floatToIntAndFrac1dp);
     RUN_TEST(test_sumToIntAverage);
     RUN_TEST(test_findMinMax);
     RUN_TEST(test_getPo2factor);
-    RUN_TEST(test_amplitude_DN_to_mPa);
+    RUN_TEST(test_amplitudeDN_to_mPa);
     RUN_TEST(test_scaleSPL);
     RUN_TEST(test_decodeI2SdataLch);
     int v = UNITY_END();

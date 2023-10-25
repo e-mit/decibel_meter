@@ -28,7 +28,7 @@ int main(void) {
 	}
 
 	#ifdef TESTS
-		test_sound_system();
+		test_soundSystem();
 	#else
 		if (!enableMicrophone(true)) {
 			errorHandler(__func__, __LINE__, __FILE__);
