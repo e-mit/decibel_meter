@@ -6,8 +6,8 @@
 void setUp(void) {}
 void tearDown(void) {}
 
-#define INTFRAC2(i,f) i##.##f
-#define INTFRAC(i,f) INTFRAC2(i,f)
+#define INTFRAC2(i, f) i##.##f
+#define INTFRAC(i, f) INTFRAC2(i, f)
 
 void test_float2IntFrac2dp(void) {
 	uint32_t intpart;

@@ -1,4 +1,4 @@
-// System tests designed to run on the target microcontroller.
+// System tests intended to run on the target microcontroller.
 
 #include "../inc/print_functions.h"
 #include "sound_test_data.h"
