@@ -33,9 +33,8 @@ extern void errorHandler(const char * func, uint32_t line, const char * file);
 
 // state variables:
 static volatile bool SPL_calc_enabled = false;
-volatile bool DMAintEnabled = false; // whether interrupts can fire
-static volatile bool SPL_calc_complete = false; // set true after every SPL calculation, which may be on
-										        // every DMA ISR OR every N ISRs, depending on filter settings.
+static volatile bool DMAintEnabled = false;
+static volatile bool SPL_calc_complete = false; // set true after every SPL calculation
 
 // variables as integer-fraction representation:
 static volatile int32_t SPL_int = 0, SPL_frac_1dp = 0;
@@ -75,7 +74,7 @@ static void reset_SPL_state(void);
 
 //////////////////////////////////////////////////////////////////////////////
 
-volatile bool isSPLcalcComplete(void) {
+bool isSPLcalcComplete(void) {
 	return SPL_calc_complete;
 }
 
@@ -249,6 +248,7 @@ void HAL_I2S_RxHalfCpltCallback(I2S_HandleTypeDef *hi2s) {
 // Called from the DMA ISR when the second half of the DMA buffer is full,
 // i.e. "HALF_BUFLEN" uint16s are in the second half of dmaBuffer
 void HAL_I2S_RxCpltCallback(I2S_HandleTypeDef *hi2s) {
+	UNUSED(hi2s);
 	processHalfDMAbuffer(HALF_BUFLEN);
 }
 
@@ -270,6 +270,7 @@ static void processHalfDMAbuffer(uint32_t halfBufferStart) {
 }
 
 void HAL_I2S_ErrorCallback(I2S_HandleTypeDef *hi2s) {
+	UNUSED(hi2s);
 	errorHandler(__func__, __LINE__, __FILE__);
 }
 

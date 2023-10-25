@@ -74,8 +74,6 @@
 ///////////////////////////////////////////////////////////////////////
 
 extern DMA_HandleTypeDef dma1;
-extern TIM_HandleTypeDef settleTimer;
-extern I2S_HandleTypeDef i2s1;
 
 void GPIO_Init(void);
 void errorHandler(const char * func, uint32_t line, const char * file);
