@@ -6,7 +6,7 @@
 void setUp(void) {}
 void tearDown(void) {}
 
-#define ONE_DP_ERROR_LIMIT 0.14
+#define ONE_DP_ERROR_LIMIT 0.14f
 #define NTEST_INPUTS 23
 
 
@@ -17,15 +17,15 @@ void test_efficient_10log10(void) {
 			116492202609360, 542225289299535, 2523845010827701, 11747503785573328,
 			54679999999999952};
 
-	const float testTrueOutputs[NTEST_INPUTS] = {27.8, 33.4, 37.5, 40.5, 47.2,
-			53.8, 60.5, 67.2, 73.9, 80.6, 87.2, 93.9, 100.6, 107.3, 113.9, 120.6,
-			127.3, 134.0, 140.7, 147.3, 154.0, 160.7, 167.4};
+	const float testTrueOutputs[NTEST_INPUTS] = {27.8f, 33.4f, 37.5f, 40.5f, 47.2f,
+			53.8f, 60.5f, 67.2f, 73.9f, 80.6f, 87.2f, 93.9f, 100.6f, 107.3f, 113.9f, 120.6f,
+			127.3f, 134.0f, 140.7f, 147.3f, 154.0f, 160.7f, 167.4f};
 
 	int32_t integerPart;
 	int32_t fractionalPart;
 	for (uint32_t i = 0; i < NTEST_INPUTS; i++) {
 		efficient_10log10(testInputs[i], &integerPart, &fractionalPart);
-		float result = ((float) integerPart) + (((float) fractionalPart)/10.0);
+		float result = ((float) integerPart) + (((float) fractionalPart)/10.0f);
 		TEST_ASSERT_FLOAT_WITHIN(ONE_DP_ERROR_LIMIT, testTrueOutputs[i], result);
 	}
 }

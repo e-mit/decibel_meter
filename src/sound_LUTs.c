@@ -14,7 +14,7 @@ const uint16_t sound_band_edges_Hz[SOUND_FREQ_BANDS+1] = {88, 177, 354, 707, 141
 
 // Fs31250_1024
 
-const float tenlog10SF_Fs31250_1024 = -4.6893855e+01;
+const float tenlog10SF_Fs31250_1024 = -4.6893855e+01f;
 const int32_t tenlog10SF_int_Fs31250_1024 = -46;
 const int32_t tenlog10SF_frac_Fs31250_1024 = -9;
 
@@ -94,7 +94,7 @@ const uint8_t bandIDs_Fs31250_1024[512] = {
 
 // Fs31250_512
 
-const float tenlog10SF_Fs31250_512 = -4.6893855e+01;
+const float tenlog10SF_Fs31250_512 = -4.6893855e+01f;
 const int32_t tenlog10SF_int_Fs31250_512 = -46;
 const int32_t tenlog10SF_frac_Fs31250_512 = -9;
 
@@ -141,7 +141,7 @@ const uint8_t bandIDs_Fs31250_512[256] = {
 
 // Fs31250_128
 
-const float tenlog10SF_Fs31250_128 = -4.6894911e+01;
+const float tenlog10SF_Fs31250_128 = -4.6894911e+01f;
 const int32_t tenlog10SF_int_Fs31250_128 = -46;
 const int32_t tenlog10SF_frac_Fs31250_128 = -9;
 
@@ -162,7 +162,7 @@ const uint8_t bandIDs_Fs31250_128[64] = {
 
 // Fs15625_128
 
-const float tenlog10SF_Fs15625_128 = -4.6894388e+01;
+const float tenlog10SF_Fs15625_128 = -4.6894388e+01f;
 const int32_t tenlog10SF_int_Fs15625_128 = -46;
 const int32_t tenlog10SF_frac_Fs15625_128 = -9;
 
@@ -183,7 +183,7 @@ const uint8_t bandIDs_Fs15625_128[64] = {
 
 // Fs31250_256
 
-const float tenlog10SF_Fs31250_256 = -4.689438766e+01;
+const float tenlog10SF_Fs31250_256 = -4.689438766e+01f;
 const int32_t tenlog10SF_int_Fs31250_256 = -46;
 const int32_t tenlog10SF_frac_Fs31250_256 = -9;
 
@@ -213,7 +213,7 @@ const uint8_t bandIDs_Fs31250_256[128] = {
 
 // Fs15625_256
 
-const float tenlog10SF_Fs15625_256 = -4.689385454e+01;
+const float tenlog10SF_Fs15625_256 = -4.689385454e+01f;
 const int32_t tenlog10SF_int_Fs15625_256 = -46;
 const int32_t tenlog10SF_frac_Fs15625_256 = -9;
 
@@ -243,7 +243,7 @@ const uint8_t bandIDs_Fs15625_256[128] = {
 
 // Fs15625_512
 
-const float tenlog10SF_Fs15625_512 = -4.689385454e+01;
+const float tenlog10SF_Fs15625_512 = -4.689385454e+01f;
 const int32_t tenlog10SF_int_Fs15625_512 = -46;
 const int32_t tenlog10SF_frac_Fs15625_512 = -9;
 
@@ -290,7 +290,7 @@ const uint8_t bandIDs_Fs15625_512[256] = {
 
 // Fs62500_256
 
-const float tenlog10SF_Fs62500_256 = -4.689399076e+01;
+const float tenlog10SF_Fs62500_256 = -4.689399076e+01f;
 const int32_t tenlog10SF_int_Fs62500_256 = -46;
 const int32_t tenlog10SF_frac_Fs62500_256 = -9;
 
@@ -320,7 +320,7 @@ const uint8_t bandIDs_Fs62500_256[128] = {
 
 // Fs62500_512
 
-const float tenlog10SF_Fs62500_512 = -4.689399076e+01;
+const float tenlog10SF_Fs62500_512 = -4.689399076e+01f;
 const int32_t tenlog10SF_int_Fs62500_512 = -46;
 const int32_t tenlog10SF_frac_Fs62500_512 = -9;
 

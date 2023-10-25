@@ -12,7 +12,7 @@
 // e.g. to print the result: printf("%i.%02i\n", intpart, fracpart2dp);
 // To convert to float: intpart + (fracpart2dp/100.0)
 void float2IntFrac2dp(float positiveValue, uint32_t *intpart, uint8_t *fracpart2dp) {
-	uint32_t rounded = (uint32_t) roundf(positiveValue*100.0);
+	uint32_t rounded = (uint32_t) roundf(positiveValue*100.0f);
 	intpart[0] = rounded/100;
 	fracpart2dp[0] = (uint8_t) (rounded - (intpart[0]*100));
 }
@@ -23,7 +23,7 @@ void float2IntFrac2dp(float positiveValue, uint32_t *intpart, uint8_t *fracpart2
 // e.g. to print the result: printf("%i.%i\n", intpart, fracpart1dp);
 // To convert to float: intpart + (fracpart1dp/10.0)
 void float2IntFrac1dp(float positiveValue, uint32_t *intpart, uint8_t *fracpart1dp) {
-	uint32_t rounded = (uint32_t) roundf(positiveValue*10.0);
+	uint32_t rounded = (uint32_t) roundf(positiveValue*10.0f);
 	intpart[0] = rounded/10;
 	fracpart1dp[0] = (uint8_t) (rounded - (intpart[0]*10));
 }
@@ -32,7 +32,7 @@ void float2IntFrac1dp(float positiveValue, uint32_t *intpart, uint8_t *fracpart1
 void sumToIntAverage(uint8_t * intpart, uint8_t * fracpart1dp, const int32_t intSum,
 		             const int32_t frac1dpSum, const uint32_t sumCount) {
 	float splAverage = (((float) intSum) +
-					   (((float) frac1dpSum)/10.0))/((float) sumCount);
+					   (((float) frac1dpSum)/10.0f))/((float) sumCount);
 	uint32_t intpart32 = 0;
 	float2IntFrac1dp(splAverage, &intpart32, fracpart1dp);
 

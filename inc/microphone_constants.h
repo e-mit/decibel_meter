@@ -16,7 +16,7 @@
 	  ik_mPa = sqrt(2)/((10^((S/dB)/20))*((2^(N-1))-1))
    e.g. If S = -26 dB and N = 24, then: ik_mPa = 3.3638e-3
 */
-static const float ik_mPa = 3.3638e-3;
+static const float ik_mPa = 3.3638e-3f;
 
 /* Decibel scale factor 'dBscale' is constant for a given microphone:
       dBscale = 20*log10((ik_mPa/1000)/(20e-6))

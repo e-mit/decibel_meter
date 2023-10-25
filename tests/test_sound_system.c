@@ -3,9 +3,9 @@
 #include "../inc/print_functions.h"
 #include "sound_test_data.h"
 
-#define PC_DIFF_LIMIT 2 // maximum abs() allowable percentage difference
-#define SPL_TOL 0.14    // maximum allowable absolute SPL (dB) difference
-#define AMP_TOL 0.014   // maximum allowable absolute pressure (mPa) difference
+#define PC_DIFF_LIMIT 2.0f // maximum abs() allowable percentage difference
+#define SPL_TOL 0.14f      // maximum allowable absolute SPL (dB) difference
+#define AMP_TOL 0.014f     // maximum allowable absolute pressure (mPa) difference
 
 #define TEST_TITLE(name) print("\nTEST: " name "\n")
 #define TEST_RESULT(x) print("%s\n-------------------------------------\n", x ? "PASS" : "FAIL");
@@ -24,14 +24,14 @@ void test_sound_system(void) {
 	// the expected result depends on Fs and NFILT (but keep the latter constant)
 	#define NFILT 128
 	#if (I2S_FREQ == 15625)
-		const float max_filt_expected = 192251.0;
+		const float max_filt_expected = 192251.0f;
 	#else
 		#error("Fs not implemented yet")
 	#endif
 
 	UNUSED(getFilteredMaxAmplitudeQ31(x1_32, X1_32_LEN - NFILT, true, true));
 	uint32_t filtmax = getFilteredMaxAmplitudeQ31(&(x1_32[X1_32_LEN - NFILT]), NFILT, false, true);
-	float pcDiff = (100.0*(((float) filtmax) - max_filt_expected))/max_filt_expected;
+	float pcDiff = (100.0f*(((float) filtmax) - max_filt_expected))/max_filt_expected;
 	print("   filtmax = %.2f\n", ((float) filtmax));
 	print("   Abs difference = %.2f\n", ((float) filtmax) - max_filt_expected);
 	print("   Percentage difference (Q31) = %.2f%%\n", pcDiff);
@@ -45,37 +45,28 @@ void test_sound_system(void) {
 	// Use real microphone data to test. Note that x1_32 was acquired with Fs = 31250 Hz
 	// But calculated SPLs have been scaled to account for varying I2S_FREQ and FFT_N.
 	#if (I2S_FREQ == 31250)
-		#if (FFT_N == 128)
-
-		#elif (FFT_N == 256)
-			const float SPL_expected = 87.9; //87.909407;
-			// {49.18719, 47.61427, 54.74916, 63.08692, 86.66056, 65.99084};
-			const float bandSPL_expected[SOUND_FREQ_BANDS] = {49.2, 47.6, 54.7, 63.1, 86.7, 66.0};
+		#if (FFT_N == 256)
+			const float SPL_expected = 87.9f;
+			const float bandSPL_expected[SOUND_FREQ_BANDS] = {49.2f, 47.6f, 54.7f, 63.1f, 86.7f, 66.0f};
 		#elif (FFT_N == 512)
-			const float SPL_expected = 87.9; //87.947914;
-			//{42.72702, 49.50471, 54.34899, 63.27509, 86.69020, 66.20656};
-			const float bandSPL_expected[SOUND_FREQ_BANDS] = {42.7, 49.5, 54.3, 63.3, 86.7, 66.2};
+			const float SPL_expected = 87.9f;
+			const float bandSPL_expected[SOUND_FREQ_BANDS] = {42.7f, 49.5f, 54.3f, 63.3f, 86.7f, 66.2f};
 		#elif (FFT_N == 1024)
-			const float SPL_expected = 88.0; //87.964126;
-			// {32.29662, 30.94850, 31.75690, 31.17087, 86.76750, 45.40472};
-			const float bandSPL_expected[SOUND_FREQ_BANDS] = {32.3, 30.9, 31.8, 31.2, 86.8, 45.4};
+			const float SPL_expected = 88.0f;
+			const float bandSPL_expected[SOUND_FREQ_BANDS] = {32.3f, 30.9f, 31.8f, 31.2f, 86.8f, 45.4f};
 		#else
 			#error("N-points and/or Fs not implemented yet")
 		#endif
 	#elif (I2S_FREQ == 15625)
 		#if (FFT_N == 128)
-			// values calculated with octave on the first 128 values in x1_32:
-			const float SPL_expected = 86.7; //86.693684;
-			//{52.83744, 54.53367, 62.10349, 86.72742, 62.75779, 56.55911};
-			const float bandSPL_expected[SOUND_FREQ_BANDS] = {52.8, 54.5, 62.1, 86.7, 62.8, 56.6};
+			const float SPL_expected = 86.7f;
+			const float bandSPL_expected[SOUND_FREQ_BANDS] = {52.8f, 54.5f, 62.1f, 86.7f, 62.8f, 56.6f};
 		#elif (FFT_N == 256)
-			const float SPL_expected = 86.7; //86.687506;
-			//{47.61427, 54.74916, 63.08692, 86.66056, 65.99084, 61.29402};
-			const float bandSPL_expected[SOUND_FREQ_BANDS] = {47.6, 54.7, 63.1, 86.7, 66.0, 61.3};
+			const float SPL_expected = 86.7f;
+			const float bandSPL_expected[SOUND_FREQ_BANDS] = {47.6f, 54.7f, 63.1f, 86.7f, 66.0f, 61.3f};
 		#elif (FFT_N == 512)
-			const float SPL_expected = 86.8; //86.750352;
-			//{49.50471, 54.34899, 63.27509, 86.69020, 66.20656, 61.22843};
-			const float bandSPL_expected[SOUND_FREQ_BANDS] = {49.5, 54.3, 63.3, 86.7, 66.2, 61.2};
+			const float SPL_expected = 86.8f;
+			const float bandSPL_expected[SOUND_FREQ_BANDS] = {49.5f, 54.3f, 63.3f, 86.7f, 66.2f, 61.2f};
 		#else
 			#error("N-points and/or Fs not implemented yet")
 		#endif
@@ -85,7 +76,7 @@ void test_sound_system(void) {
 
 	// Values for testing amplitude scaling/output:
 	uint32_t maximumAmplitude_in = 875787;
-	float peak_amp_mPa_actual = 2945.97; // assuming ik_mPa = 3.3638e-3;
+	float peak_amp_mPa_actual = 2945.97f; // assuming ik_mPa = 3.3638e-3;
 
 	memcpy((int32_t *) &dataBuffer, &x1_32, 4*FFT_N);
 	calculateSPLQ31();
@@ -94,17 +85,17 @@ void test_sound_system(void) {
 	maximumAmplitude = maximumAmplitude_in;
 	getSoundData(&data, true, true);
 
-	float theSPL = ((float) data.SPL_dBA_int) + (((float) data.SPL_dBA_fr_1dp)/10.0);
+	float theSPL = ((float) data.SPL_dBA_int) + (((float) data.SPL_dBA_fr_1dp)/10.0f);
 	print("   SPL abs difference = %.2f (SPL = %.2f)\n", fabs(theSPL - SPL_expected), theSPL);
 	ok = ok && (fabs(theSPL - SPL_expected) <= SPL_TOL);
 
 	for (uint32_t i = 0; i < SOUND_FREQ_BANDS; i++) {
-		theSPL = ((float) bandSPL_int[i]) + (((float) bandSPL_frac_1dp[i])/10.0);
+		theSPL = ((float) bandSPL_int[i]) + (((float) bandSPL_frac_1dp[i])/10.0f);
 		print("   Band %i abs difference = %.2f\n", i, fabs(theSPL - bandSPL_expected[i]));
 		ok = ok && (fabs(theSPL - bandSPL_expected[i]) <= SPL_TOL);
 	}
 
-	float theAmp = ((float) data.peak_amp_mPa_int) + (((float) data.peak_amp_mPa_fr_2dp)/100.0);
+	float theAmp = ((float) data.peak_amp_mPa_int) + (((float) data.peak_amp_mPa_fr_2dp)/100.0f);
 	print("   Max. amplitude abs difference = %.2f\n", fabs(theAmp - peak_amp_mPa_actual));
 	ok = ok && (fabs(theAmp - peak_amp_mPa_actual) <= AMP_TOL);
 

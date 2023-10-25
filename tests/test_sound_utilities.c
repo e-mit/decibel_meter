@@ -239,7 +239,7 @@ void test_amplitude_DN_to_mPa(void) {
 	//void amplitude_DN_to_mPa(const uint32_t ampDN, const float ik_mPa, uint16_t * intAmp_mPa,
 	//		                 uint8_t * frac2dpAmp_mPa)
 
-	float ik_mPa = 1.23e-3;
+	float ik_mPa = 1.23e-3f;
 	uint16_t intAmp_mPa;
 	uint8_t frac2dpAmp_mPa;
 
