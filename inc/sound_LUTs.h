@@ -4,7 +4,6 @@
 #define SOUND_LUTS_H
 
 #include <stdint.h>
-#include <arm_math.h>
 
 /* The constants defined in this file are:
  - sound_band_edges_Hz, sound_band_mids_Hz = Define the frequency bands for sound level measurement
@@ -22,55 +21,55 @@
 extern const uint16_t sound_band_mids_Hz[];
 extern const uint16_t sound_band_edges_Hz[];
 
-extern const float32_t tenlog10SF_Fs31250_1024;
+extern const float tenlog10SF_Fs31250_1024;
 extern const int32_t tenlog10SF_int_Fs31250_1024;
 extern const int32_t tenlog10SF_frac_Fs31250_1024;
 extern const uint16_t sqWsc_Fs31250_1024[];
 extern const uint8_t bandIDs_Fs31250_1024[];
 
-extern const float32_t tenlog10SF_Fs31250_512;
+extern const float tenlog10SF_Fs31250_512;
 extern const int32_t tenlog10SF_int_Fs31250_512;
 extern const int32_t tenlog10SF_frac_Fs31250_512;
 extern const uint16_t sqWsc_Fs31250_512[];
 extern const uint8_t bandIDs_Fs31250_512[];
 
-extern const float32_t tenlog10SF_Fs31250_256;
+extern const float tenlog10SF_Fs31250_256;
 extern const int32_t tenlog10SF_int_Fs31250_256;
 extern const int32_t tenlog10SF_frac_Fs31250_256;
 extern const uint16_t sqWsc_Fs31250_256[];
 extern const uint8_t bandIDs_Fs31250_256[];
 
-extern const float32_t tenlog10SF_Fs31250_128;
+extern const float tenlog10SF_Fs31250_128;
 extern const int32_t tenlog10SF_int_Fs31250_128;
 extern const int32_t tenlog10SF_frac_Fs31250_128;
 extern const uint16_t sqWsc_Fs31250_128[];
 extern const uint8_t bandIDs_Fs31250_128[];
 
-extern const float32_t tenlog10SF_Fs15625_128;
+extern const float tenlog10SF_Fs15625_128;
 extern const int32_t tenlog10SF_int_Fs15625_128;
 extern const int32_t tenlog10SF_frac_Fs15625_128;
 extern const uint16_t sqWsc_Fs15625_128[];
 extern const uint8_t bandIDs_Fs15625_128[];
 
-extern const float32_t tenlog10SF_Fs15625_256;
+extern const float tenlog10SF_Fs15625_256;
 extern const int32_t tenlog10SF_int_Fs15625_256;
 extern const int32_t tenlog10SF_frac_Fs15625_256;
 extern const uint16_t sqWsc_Fs15625_256[];
 extern const uint8_t bandIDs_Fs15625_256[];
 
-extern const float32_t tenlog10SF_Fs15625_512;
+extern const float tenlog10SF_Fs15625_512;
 extern const int32_t tenlog10SF_int_Fs15625_512;
 extern const int32_t tenlog10SF_frac_Fs15625_512;
 extern const uint16_t sqWsc_Fs15625_512[];
 extern const uint8_t bandIDs_Fs15625_512[];
 
-extern const float32_t tenlog10SF_Fs50000_256;
+extern const float tenlog10SF_Fs50000_256;
 extern const int32_t tenlog10SF_int_Fs50000_256;
 extern const int32_t tenlog10SF_frac_Fs50000_256;
 extern const uint16_t sqWsc_Fs50000_256[];
 extern const uint8_t bandIDs_Fs50000_256[];
 
-extern const float32_t tenlog10SF_Fs50000_512;
+extern const float tenlog10SF_Fs50000_512;
 extern const int32_t tenlog10SF_int_Fs50000_512;
 extern const int32_t tenlog10SF_frac_Fs50000_512;
 extern const uint16_t sqWsc_Fs50000_512[];

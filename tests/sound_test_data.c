@@ -1,7 +1,6 @@
 // Test data for system tests.
 
 #include "sound_test_data.h"
-#include "arm_math.h"
 #include <stdint.h>
 
 // The data in testInput_f32_10khz were copied from the example program in:
@@ -10,7 +9,7 @@
 // NB: this array is in the format real, imag, real, imag,... Thus it is 1024
 // samples long. See below for correct FFT result and also for just the real
 // part of the input.
-const float32_t testInput_f32_10khz[X0_LEN] = {
+const float testInput_f32_10khz[X0_LEN] = {
     -0.865129623056441, 0.000000000000000,  -2.655020678073846,
     0.000000000000000,  0.600664612949661,  0.000000000000000,
     0.080378093886515,  0.000000000000000,  -2.899160484012034,
@@ -697,7 +696,7 @@ const float32_t testInput_f32_10khz[X0_LEN] = {
 
 // The following is the abs(fft(testInput_f32_10khz(1:2:2048))), calculated with
 // Octave:
-const float32_t FFT_testInput_f32_10khz[(X0_LEN / 4) + 1] = {
+const float FFT_testInput_f32_10khz[(X0_LEN / 4) + 1] = {
     8.9446e+01, 2.6103e+01, 3.5747e+01, 3.4722e+01, 4.9243e+01, 5.5421e+01,
     8.9122e+01, 2.0613e+01, 3.7028e+01, 9.8742e+01, 9.3842e+01, 6.3702e+01,
     6.1677e+01, 8.4586e+01, 1.2389e+02, 2.5083e+01, 5.2047e+01, 7.4869e+01,
@@ -787,7 +786,7 @@ const float32_t FFT_testInput_f32_10khz[(X0_LEN / 4) + 1] = {
 
 // The following is the real parts of the data above, and only half of it due to
 // space constraints This is: real(fft(testInput_f32_10khz(1:2:2048)))(1:512)
-const float32_t real_FFT_testInput_f32_10khz[X0_LEN / 4] = {
+const float real_FFT_testInput_f32_10khz[X0_LEN / 4] = {
     -0.8651296, -2.6550207, 0.6006646,  0.0803781,  -2.8991605, 2.5630043,
     3.0783284,  0.1059068,  0.0483669,  -0.1456965, -0.0234172, 2.1277292,
     -1.1766331, 3.6902236,  -0.6227918, 0.7228374,  2.7397542,  -0.0626104,
@@ -882,7 +881,7 @@ const float32_t real_FFT_testInput_f32_10khz[X0_LEN / 4] = {
  * used. A calibrated commercial sound meter read 84.3 dBA, 83.5 dBC. The values
  * are 24-bit signed ints.
  */
-const float32_t x1_32_SPL_dBA = 84.3;
+const float x1_32_SPL_dBA = 84.3;
 const int32_t x1_32[X1_32_LEN] = {
     -607424, -558016, -489920, -416320, -349376, -298048, -270144, -271296,
     -302144, -356672, -425408, -497408, -561600, -608512, -631488, -627456,
@@ -1016,7 +1015,7 @@ const int32_t x1_32[X1_32_LEN] = {
 // FFT_x1_32 = abs(FFT(x1_32)). ie. the direct result of FFT of the above array,
 // // keeping only the first (unique) N/2 points. No scaling or offset has been
 // applied.
-const float32_t FFT_x1_32[X1_32_LEN / 2] = {
+const float FFT_x1_32[X1_32_LEN / 2] = {
     463955840, 732227,  274124,      48253.8, 147648,  85576.2, 92472,
     36970,     61477,   25616.4,     89135.5, 27564.4, 80341.8, 49784,
     64248.5,   73319.8, 19985.2,     54393.3, 38075.1, 23409,   40245.5,
@@ -1098,7 +1097,7 @@ const float32_t FFT_x1_32[X1_32_LEN / 2] = {
  * calibrated commercial sound meter read 82.5 dBA, 82 dBC. The values are
  * 24-bit signed ints.
  */
-const float32_t x2_32_SPL_dBA = 82.5;
+const float x2_32_SPL_dBA = 82.5;
 const int32_t x2_32[X2_32_LEN] = {
     -420736, -436736, -457344, -506368, -380480, -533056, -344000, -575104,
     -355328, -614720, -465920, -360448, -663360, -368896, -604096, -448704,
