@@ -130,6 +130,7 @@ void HAL_UART_MspInit(UART_HandleTypeDef* huart) {
 }
 
 void HAL_UART_MspDeInit(UART_HandleTypeDef* huart) {
+	UNUSED(huart);
 	__HAL_RCC_USART4_CLK_DISABLE();
 	HAL_GPIO_DeInit(USART4_RX_PORT,USART4_RX_PIN);
 	HAL_GPIO_DeInit(USART4_TX_PORT,USART4_TX_PIN);
