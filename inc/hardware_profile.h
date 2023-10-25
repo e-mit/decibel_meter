@@ -35,8 +35,8 @@
 
 // I2S1
 
-// Enable an internal pulldown on the SD line so it does not float when the right audio channel is enabled
-// this removes the need for an external pulldown.
+// Enable an internal pulldown on the SD line so it does not float when the right
+// audio channel is enabled. This removes the need for an external pulldown.
 #define I2S1_SD_INTERNAL_PD
 
 #define I2S1_CLK_PIN GPIO_PIN_5
@@ -66,7 +66,8 @@
 
 // DMA Interrupt priority.
 // Priority must be a number 0-3; M0+ does not use subpriorities.
-// Equal priority interrupts do not interrupt each other. Lower priorities interrupt higher ones.
+// Equal priority interrupts do not interrupt each other.
+// Lower priorities interrupt higher ones.
 // If two equal-priority interrupts are pending, the IRQn breaks the tie.
 // NB: Systick interrupt priority is 0 with IRQn = -1
 #define DMA_IRQ_PRIORITY 2  // IRQn = 9

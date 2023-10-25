@@ -18,14 +18,17 @@ DMA_HandleTypeDef dma1;
 ////////////////////////////////////////
 
 // Call this as: errorHandler(__func__, __LINE__, __FILE__);
-void errorHandler(const char * func, const uint32_t line, const char * file) {
+void errorHandler(const char * func, const uint32_t line, const char * file)
+{
 	print("Error in %s at line %u in file: %s\n", func, line, file);
-	while (true) {
+	while (true)
+	{
 	}
 }
 
 // Set up all system clocks.
-bool SystemClock_Config(void) {
+bool SystemClock_Config(void)
+{
 	HAL_PWREx_ControlVoltageScaling(PWR_REGULATOR_VOLTAGE_SCALE1);
 	RCC_OscInitTypeDef RCC_OscInitStruct = {0};
 	RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
@@ -38,7 +41,7 @@ bool SystemClock_Config(void) {
 	#else
 		RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
 		RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI;
-		RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV32; // EM: changed P,Q (unused) from 2,2 to 32,8
+		RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV32;
 		RCC_OscInitStruct.PLL.PLLQ = RCC_PLLQ_DIV8;
 		#if (SYSCLK_FREQ_HZ == 32000000)
 			RCC_OscInitStruct.PLL.PLLM = RCC_PLLM_DIV2;
@@ -72,45 +75,52 @@ bool SystemClock_Config(void) {
 			#error("Unrecognised sysclk frequency")
 		#endif
 	#endif
-	if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK) {
+	if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
+	{
 		return false;
 	}
 
 	// Initialize the CPU, AHB and APB bus clocks
 	RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
-	RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK|RCC_CLOCKTYPE_PCLK1;
+	RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
+			                                        |RCC_CLOCKTYPE_PCLK1;
 
 	RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
 	RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV1;
 	#if (SYSCLK_FREQ_HZ == 16000000)
 		RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_HSI;
-		if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_0) != HAL_OK) {
+		if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_0) != HAL_OK)
+		{
 	#elif ((SYSCLK_FREQ_HZ == 32000000) || (SYSCLK_FREQ_HZ == 36000000) || \
 		   (SYSCLK_FREQ_HZ == 40000000) || (SYSCLK_FREQ_HZ == 44000000) || \
 		   (SYSCLK_FREQ_HZ == 48000000))
 		RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
-		if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_1) != HAL_OK) {
+		if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_1) != HAL_OK)
+		{
 	#elif ((SYSCLK_FREQ_HZ == 56000000) || (SYSCLK_FREQ_HZ == 64000000))
 		RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
-		if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_2) != HAL_OK) {
+		if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_2) != HAL_OK)
+		{
 	#else
 		#error("Unrecognised sysclk rate")
 	#endif
-		return false;
-	}
+			return false;
+		}
 
 	// Initialize the peripheral clocks
 	RCC_PeriphCLKInitTypeDef PeriphClkInit = {0};
 	PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_I2S1|RCC_PERIPHCLK_I2C1;
-	PeriphClkInit.I2s1ClockSelection = RCC_I2S1CLKSOURCE_SYSCLK; // use HSI directly; not PLL
-	if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit) != HAL_OK) {
+	PeriphClkInit.I2s1ClockSelection = RCC_I2S1CLKSOURCE_SYSCLK;
+	if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit) != HAL_OK)
+	{
 		return false;
 	}
 	return true;
 }
 
 // Set up UART for printing general messages over serial.
-bool UART_Init(void) {
+bool UART_Init(void)
+{
 	uart.Instance = USART4;
 	uart.Init.BaudRate = UART_BAUD;
 	uart.Init.WordLength = UART_WORDLENGTH;
@@ -122,7 +132,8 @@ bool UART_Init(void) {
 	uart.Init.OneBitSampling = UART_ONE_BIT_SAMPLE_DISABLE;
 	uart.Init.ClockPrescaler = UART_PRESCALER_DIV1;
 	uart.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_NO_INIT;
-	if (HAL_UART_Init(&uart) != HAL_OK) {
+	if (HAL_UART_Init(&uart) != HAL_OK)
+	{
 		return false;
 	}
 	return true;
@@ -131,7 +142,8 @@ bool UART_Init(void) {
 
 // Initialize TIMER3 but do not start it.
 // Return bool success.
-bool TIM3_Init(TIM_HandleTypeDef ** pHandle) {
+bool TIM3_Init(TIM_HandleTypeDef ** pHandle)
+{
 	pHandle[0] = &settleTimer;
 	TIM_ClockConfigTypeDef sClockSourceConfig = {0};
 	TIM_MasterConfigTypeDef sMasterConfig = {0};
@@ -147,16 +159,20 @@ bool TIM3_Init(TIM_HandleTypeDef ** pHandle) {
 	settleTimer.Init.Period = TMR3_PERIOD;
 	settleTimer.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
 	settleTimer.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
-	if (HAL_TIM_Base_Init(&settleTimer) != HAL_OK) {
+	if (HAL_TIM_Base_Init(&settleTimer) != HAL_OK)
+	{
 		return false;
 	}
 	sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
-	if (HAL_TIM_ConfigClockSource(&settleTimer, &sClockSourceConfig) != HAL_OK) {
+	if (HAL_TIM_ConfigClockSource(&settleTimer, &sClockSourceConfig) != HAL_OK)
+	{
 		return false;
 	}
 	sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
 	sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
-	if (HAL_TIMEx_MasterConfigSynchronization(&settleTimer, &sMasterConfig) != HAL_OK) {
+	if (HAL_TIMEx_MasterConfigSynchronization(&settleTimer,
+			                                  &sMasterConfig) != HAL_OK)
+	{
 		return false;
 	}
 
@@ -167,7 +183,8 @@ bool TIM3_Init(TIM_HandleTypeDef ** pHandle) {
 
 // Initialize I2S but do not enable it.
 // Return bool success.
-bool I2S1_Init(I2S_HandleTypeDef ** pHandle) {
+bool I2S1_Init(I2S_HandleTypeDef ** pHandle)
+{
 	pHandle[0] = &i2s1;
 	i2s1.Instance = SPI1;
 	i2s1.Init.Mode = I2S_MODE_MASTER_RX;
@@ -180,7 +197,8 @@ bool I2S1_Init(I2S_HandleTypeDef ** pHandle) {
 }
 
 // Initialize DMA but do not enable DMA interrupts.
-void DMA_Init(DMA_HandleTypeDef ** pHandle) {
+void DMA_Init(DMA_HandleTypeDef ** pHandle)
+{
 	pHandle[0] = &dma1;
 	__HAL_RCC_DMA1_CLK_ENABLE();
 	#if ((DMA_IRQ_PRIORITY > 3)||(DMA_IRQ_PRIORITY<0))
@@ -191,7 +209,8 @@ void DMA_Init(DMA_HandleTypeDef ** pHandle) {
 
 
 // Provide a print interface for print_functions.
-void printString(const char * str, uint16_t length) {
+void printString(const char * str, uint16_t length)
+{
 	HAL_UART_Transmit(&uart, (uint8_t*) str, length, 0xFFFF);
 }
 

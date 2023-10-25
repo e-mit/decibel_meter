@@ -62,7 +62,6 @@
 	#endif
 #elif (I2S_FREQ == 31250)
 	#if (FFT_N == 128)
-		#warning("This choice of FFT_N and I2S_FREQ results in NO signal in the lowest octave band")
 		const arm_cfft_instance_q31 * fftInstance = &arm_cfft_sR_q31_len128;
 		const uint16_t * sqWsc = sqWsc_Fs31250_128;
 		const int32_t * tenlog10SF_int = &tenlog10SF_int_Fs31250_128;
@@ -116,7 +115,8 @@
 #endif
 
 // Sound amplitude filter coefficients.
-// Want a IIR filter with cutoff of fc = 10Hz. The coefficients depend on Fs according to:
+// Want a IIR filter with cutoff of fc = 10Hz.
+// The coefficients depend on Fs according to:
 //   b = exp(-2.pi.(1/Fs).fc)
 //   a0 = (1+b)/2
 //   a1 = -a0

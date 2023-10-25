@@ -9,7 +9,8 @@ void tearDown(void) {}
 #define INTFRAC2(i, f) i##.##f
 #define INTFRAC(i, f) INTFRAC2(i, f)
 
-void test_floatToIntAndFrac2dp(void) {
+void test_floatToIntAndFrac2dp(void)
+{
 	uint32_t intpart;
 	uint8_t fracpart2dp;
 	#define INTPART 35
@@ -61,7 +62,8 @@ void test_floatToIntAndFrac2dp(void) {
 	#undef FRACPART
 }
 
-void test_floatToIntAndFrac1dp(void) {
+void test_floatToIntAndFrac1dp(void)
+{
 	uint32_t intpart;
 	uint8_t fracpart2dp;
 	#define INTPART 35
@@ -106,13 +108,10 @@ void test_floatToIntAndFrac1dp(void) {
 }
 
 
-void test_sumToIntAverage(void) {
-
+void test_sumToIntAverage(void)
+{
 	uint8_t intpart;
 	uint8_t fracpart1dp;
-
-	//sumToIntAverage(&intpart, &fracpart1dp, const int32_t intSum,
-	//	             const int32_t frac1dpSum, const uint32_t sumCount);
 
 	sumToIntAverage(&intpart, &fracpart1dp, 0, 0, 1);
 	TEST_ASSERT_EQUAL_UINT8(0, intpart);
@@ -160,9 +159,8 @@ void test_sumToIntAverage(void) {
 }
 
 
-void test_findMinMax(void) {
-	//findMinMax(int32_t * min, int32_t * max, const int32_t * array, const uint32_t length);
-
+void test_findMinMax(void)
+{
 	{
 	int32_t min, max, array[] = {5};
 	findMinMax(&min, &max, array, 1);
@@ -219,9 +217,8 @@ void test_findMinMax(void) {
 	}
 }
 
-void test_getPo2factor(void) {
-	// uint32_t getPo2factor(uint32_t bigVal, uint32_t smallVal)
-
+void test_getPo2factor(void)
+{
 	TEST_ASSERT_EQUAL_UINT32(0, getPo2factor(2, 10));
 	TEST_ASSERT_EQUAL_UINT32(0, getPo2factor(10, 10));
 	TEST_ASSERT_EQUAL_UINT32(0, getPo2factor(11, 10));
@@ -235,10 +232,8 @@ void test_getPo2factor(void) {
 	TEST_ASSERT_EQUAL_UINT32(14, getPo2factor(96732581, 3129));
 }
 
-void test_amplitudeDN_to_mPa(void) {
-	//void amplitudeDN_to_mPa(const uint32_t ampDN, const float ik_mPa, uint16_t * intAmp_mPa,
-	//		                 uint8_t * frac2dpAmp_mPa)
-
+void test_amplitudeDN_to_mPa(void)
+{
 	float ik_mPa = 1.23e-3f;
 	uint16_t intAmp_mPa;
 	uint8_t frac2dpAmp_mPa;
@@ -265,12 +260,8 @@ void test_amplitudeDN_to_mPa(void) {
 }
 
 
-void test_scaleSPL(void) {
-	//	void scaleSPL(uint64_t sumSq, const int32_t dBscale_int, const int32_t dBscale_frac,
-	//			      const int32_t weightingInt, const int32_t weightingFrac,
-	//			      int32_t * SPLintegerPart, int32_t * SPLfractionalPart)
-	// Calculate: SPLvalue = (10.0*log10(sumSq)) + dBscale + weightTerm;
-
+void test_scaleSPL(void)
+{
 	int32_t SPLintegerPart;
 	int32_t SPLfractionalPart;
 
@@ -295,10 +286,11 @@ void test_scaleSPL(void) {
 	TEST_ASSERT_EQUAL_INT32(5, SPLfractionalPart);
 }
 
-void test_decodeI2SdataLch(void) {
-	// void decodeI2SdataLch(const uint16_t * inBuf, const uint32_t inBuflen, int32_t * outBuf)
+void test_decodeI2SdataLch(void)
+{
 	#define NSAMP 5
-	uint16_t inBuf[NSAMP*4] = {0x7FF1, 0xE800, 0, 0, 0xB202, 0xB900, 0, 0, 65157, 16384, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0};
+	uint16_t inBuf[NSAMP*4] = {0x7FF1, 0xE800, 0, 0, 0xB202, 0xB900, 0, 0,
+			                   65157, 16384, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0};
 	int32_t outBuf[NSAMP];
 	const int32_t outBufExpected[NSAMP] = {8385000, -5111111, -96960, 256, 0};
 	decodeI2SdataLch(inBuf, NSAMP*4, outBuf);
@@ -306,7 +298,8 @@ void test_decodeI2SdataLch(void) {
 	#undef NSAMP
 }
 
-int main(void) {
+int main(void)
+{
 	printf("\n#######################\n./%s\n\n",__FILE__);
     UNITY_BEGIN();
     RUN_TEST(test_floatToIntAndFrac2dp);

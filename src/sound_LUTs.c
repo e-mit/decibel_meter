@@ -7,8 +7,10 @@
 
 // Output sound bands: edges and midpoints
 
-const uint16_t sound_band_mids_Hz[SOUND_FREQ_BANDS] = {125, 250, 500, 1000, 2000, 4000};
-const uint16_t sound_band_edges_Hz[SOUND_FREQ_BANDS+1] = {88, 177, 354, 707, 1414, 2828, 5657};
+const uint16_t sound_band_mids_Hz[SOUND_FREQ_BANDS] = {125, 250, 500,
+		                                               1000, 2000, 4000};
+const uint16_t sound_band_edges_Hz[SOUND_FREQ_BANDS+1] = {88, 177, 354, 707,
+		                                                  1414, 2828, 5657};
 
 //////////////////////////////////////////////////////////////////////
 

@@ -10,7 +10,8 @@ void tearDown(void) {}
 #define NTEST_INPUTS 23
 
 
-void test_efficient10log10(void) {
+void test_efficient10log10(void)
+{
 	const uint64_t testInputs[NTEST_INPUTS] = {596, 2178, 5591, 11170, 51992, 242002,
 			1126424, 5243060, 24404378, 113592759, 528729520, 2461027526, 11455113150,
 			53319036834, 248179101477, 1155175900896, 5376888521506, 25027296838757,
@@ -18,19 +19,21 @@ void test_efficient10log10(void) {
 			54679999999999952};
 
 	const float testTrueOutputs[NTEST_INPUTS] = {27.8f, 33.4f, 37.5f, 40.5f, 47.2f,
-			53.8f, 60.5f, 67.2f, 73.9f, 80.6f, 87.2f, 93.9f, 100.6f, 107.3f, 113.9f, 120.6f,
-			127.3f, 134.0f, 140.7f, 147.3f, 154.0f, 160.7f, 167.4f};
+			53.8f, 60.5f, 67.2f, 73.9f, 80.6f, 87.2f, 93.9f, 100.6f, 107.3f, 113.9f,
+			120.6f, 127.3f, 134.0f, 140.7f, 147.3f, 154.0f, 160.7f, 167.4f};
 
 	int32_t integerPart;
 	int32_t fractionalPart;
-	for (uint32_t i = 0; i < NTEST_INPUTS; i++) {
+	for (uint32_t i = 0; i < NTEST_INPUTS; i++)
+	{
 		efficient10log10(testInputs[i], &integerPart, &fractionalPart);
 		float result = ((float) integerPart) + (((float) fractionalPart)/10.0f);
 		TEST_ASSERT_FLOAT_WITHIN(ONE_DP_ERROR_LIMIT, testTrueOutputs[i], result);
 	}
 }
 
-void test_correctIntFracNumber(void) {
+void test_correctIntFracNumber(void)
+{
 	int32_t integerPart;
 	int32_t fractionalPart;
 
@@ -83,7 +86,8 @@ void test_correctIntFracNumber(void) {
 	TEST_ASSERT_EQUAL_INT32(9, fractionalPart);
 }
 
-int main(void) {
+int main(void)
+{
 	printf("\n#######################\n./%s\n\n",__FILE__);
     UNITY_BEGIN();
     RUN_TEST(test_efficient10log10);

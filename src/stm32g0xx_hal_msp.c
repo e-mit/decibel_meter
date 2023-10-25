@@ -24,7 +24,8 @@
   ******************************************************************************
   */
 
-void HAL_MspInit(void) {
+void HAL_MspInit(void)
+{
   __HAL_RCC_SYSCFG_CLK_ENABLE();
   __HAL_RCC_PWR_CLK_ENABLE();
 }
@@ -105,7 +106,8 @@ void HAL_I2S_MspDeInit(I2S_HandleTypeDef* hi2s)
   }
 }
 
-void HAL_UART_MspInit(UART_HandleTypeDef* huart) {
+void HAL_UART_MspInit(UART_HandleTypeDef* huart)
+{
 	UNUSED(huart);
 	GPIO_InitTypeDef GPIO_InitStruct = {0};
 	__HAL_RCC_USART4_CLK_ENABLE();
@@ -129,7 +131,8 @@ void HAL_UART_MspInit(UART_HandleTypeDef* huart) {
 	HAL_GPIO_Init(USART4_RX_PORT, &GPIO_InitStruct);
 }
 
-void HAL_UART_MspDeInit(UART_HandleTypeDef* huart) {
+void HAL_UART_MspDeInit(UART_HandleTypeDef* huart)
+{
 	UNUSED(huart);
 	__HAL_RCC_USART4_CLK_DISABLE();
 	HAL_GPIO_DeInit(USART4_RX_PORT,USART4_RX_PIN);
