@@ -106,6 +106,7 @@ void HAL_I2S_MspDeInit(I2S_HandleTypeDef* hi2s)
 }
 
 void HAL_UART_MspInit(UART_HandleTypeDef* huart) {
+	UNUSED(huart);
 	GPIO_InitTypeDef GPIO_InitStruct = {0};
 	__HAL_RCC_USART4_CLK_ENABLE();
 

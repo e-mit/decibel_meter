@@ -242,6 +242,7 @@ void enableSPLcalculation(bool bEnable) {
 // Called from the DMA ISR when the first half of the DMA buffer is full,
 // i.e. "HALF_BUFLEN" uint16s are in the first half of dmaBuffer
 void HAL_I2S_RxHalfCpltCallback(I2S_HandleTypeDef *hi2s) {
+	UNUSED(hi2s);
 	processHalfDMAbuffer(0);
 }
 
