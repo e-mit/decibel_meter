@@ -26,35 +26,35 @@ extern void errorHandler(const char * func, uint32_t line, const char * file);
 
 ////////////////////////////////////////////////
 
-#define BIT_ROUNDING_MARGIN 4
+// Constants
 #define EIGHTH_BUFLEN FFT_N
 #define HALF_BUFLEN (EIGHTH_BUFLEN*4)
 #define FULL_BUFLEN (HALF_BUFLEN*2)
+#define BIT_ROUNDING_MARGIN 4
 
-// state variables:
+// State variables:
 static volatile bool SPL_calc_enabled = false;
 static volatile bool DMAintEnabled = false;
 static volatile bool SPL_calc_complete = false; // set true after every SPL calculation
+static volatile uint32_t amplitudeSettlingPeriods = 0;
 
-// variables as integer-fraction representation:
+// Derived data
+static volatile uint32_t maximumAmplitude = 0; // stores the maximum until cleared by user
 static volatile int32_t SPL_int = 0, SPL_frac_1dp = 0;
 static volatile int32_t bandSPL_int[SOUND_FREQ_BANDS] = {0}, bandSPL_frac_1dp[SOUND_FREQ_BANDS] = {0};
 
-static volatile uint32_t maximumAmplitude = 0; // stores the maximum until cleared by user
-static volatile uint16_t dmaBuffer[FULL_BUFLEN] = {0}; // holds raw uint16s received from I2S module, used in 2 halves
-static volatile int32_t dataBuffer[EIGHTH_BUFLEN] = {0}; // holds final 24-bit sound data from half of the DMA
+// Memory buffers
+static volatile uint16_t dmaBuffer[FULL_BUFLEN] = {0}; // raw uint16s received from I2S module, used in 2 halves
+static volatile int32_t dataBuffer[EIGHTH_BUFLEN] = {0}; // final 24-bit sound data from half of the DMA
 
-// Handles for peripherals:
+// Handles for peripherals
 static TIM_HandleTypeDef * hSettleTimer;
 static I2S_HandleTypeDef * hI2S;
 static DMA_HandleTypeDef * hDMA;
 static IRQn_Type DMA_Channel_IRQn;
 
-// Counter used to ignore the maximum amplitude for the first
-// N_AMP_SETTLE_PERIODS half-DMA interrupts, allowing the filter to settle.
-static volatile uint32_t amplitudeSettlingPeriods = 0;
-
 #ifdef FILTER_SPL
+	// SPL filter state variables
 	static volatile int32_t spl_int_sum = 0;
 	static volatile int32_t spl_frac1dp_sum = 0;
 	static volatile int32_t band_spl_int_sum[SOUND_FREQ_BANDS] = {0};
@@ -67,10 +67,10 @@ static volatile uint32_t amplitudeSettlingPeriods = 0;
 static bool startMicSettlingPeriod(void);
 static void processHalfDMAbuffer(uint32_t halfBufferStart);
 static void calculateSPLQ31(void);
-static uint32_t getFilteredMaxAmplitudeQ31(const int32_t * data, const uint32_t length,
-										   bool reset, bool updateMaxAmpFollower);
 static bool micSettlingComplete(void);
 static void reset_SPL_state(void);
+static uint32_t getFilteredMaxAmplitudeQ31(const int32_t * data, const uint32_t length,
+										   bool reset, bool updateMaxAmpFollower);
 
 //////////////////////////////////////////////////////////////////////////////
 
