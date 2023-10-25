@@ -7,7 +7,7 @@
 #include <stdlib.h>
 #include "print_functions.h"
 
-extern void printString(char * str, uint16_t len); // this must be supplied in external code
+extern void printString(const char * str, uint16_t len); // this must be supplied in external code
 
 static char strbuf[512] = {0};
 

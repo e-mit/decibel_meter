@@ -22,7 +22,7 @@
 #include "microphone_constants.h" // Supply this to define the microphone response
 
 // This function must be supplied externally:
-extern void errorHandler(const char * func, uint32_t line, const char * file);
+extern void errorHandler(const char * func, const uint32_t line, const char * file);
 
 ////////////////////////////////////////////////
 

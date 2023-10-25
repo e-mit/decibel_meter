@@ -79,7 +79,7 @@ void GPIO_Init(void);
 void errorHandler(const char * func, uint32_t line, const char * file);
 bool SystemClock_Config(void);
 bool UART_Init(void);
-void printString(char * str, uint16_t len);
+void printString(const char * str, uint16_t len);
 bool TIM3_Init(TIM_HandleTypeDef ** pHandle);
 bool I2S1_Init(I2S_HandleTypeDef ** pHandle);
 void DMA_Init(DMA_HandleTypeDef ** pHandle);
