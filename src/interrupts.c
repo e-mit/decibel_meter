@@ -1,5 +1,4 @@
 #include <stdbool.h>
-#include "interrupts.h"
 #include "hardware_profile.h"
 #include "stm32g0xx_hal.h"
 
