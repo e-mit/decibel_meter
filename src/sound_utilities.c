@@ -11,7 +11,7 @@
 // The float input must be positive and fit in a uint32.
 // e.g. to print the result: printf("%i.%02i\n", intpart, fracpart2dp);
 // To convert to float: intpart + (fracpart2dp/100.0)
-void float2IntFrac2dp(float positiveValue, uint32_t *intpart, uint8_t *fracpart2dp) {
+void floatToIntAndFrac2dp(float positiveValue, uint32_t *intpart, uint8_t *fracpart2dp) {
 	uint32_t rounded = (uint32_t) roundf(positiveValue*100.0f);
 	intpart[0] = rounded/100;
 	fracpart2dp[0] = (uint8_t) (rounded - (intpart[0]*100));
@@ -22,7 +22,7 @@ void float2IntFrac2dp(float positiveValue, uint32_t *intpart, uint8_t *fracpart2
 // The float input must be positive and fit in a uint32.
 // e.g. to print the result: printf("%i.%i\n", intpart, fracpart1dp);
 // To convert to float: intpart + (fracpart1dp/10.0)
-void float2IntFrac1dp(float positiveValue, uint32_t *intpart, uint8_t *fracpart1dp) {
+void floatToIntAndFrac1dp(float positiveValue, uint32_t *intpart, uint8_t *fracpart1dp) {
 	uint32_t rounded = (uint32_t) roundf(positiveValue*10.0f);
 	intpart[0] = rounded/10;
 	fracpart1dp[0] = (uint8_t) (rounded - (intpart[0]*10));
@@ -34,7 +34,7 @@ void sumToIntAverage(uint8_t * intpart, uint8_t * fracpart1dp, const int32_t int
 	float splAverage = (((float) intSum) +
 					   (((float) frac1dpSum)/10.0f))/((float) sumCount);
 	uint32_t intpart32 = 0;
-	float2IntFrac1dp(splAverage, &intpart32, fracpart1dp);
+	floatToIntAndFrac1dp(splAverage, &intpart32, fracpart1dp);
 
 	if (intpart32 > UINT8_MAX) {
 		intpart[0] = UINT8_MAX;
@@ -79,11 +79,11 @@ uint32_t getPo2factor(uint32_t bigVal, uint32_t smallVal) {
 // Convert an amplitude value in "DN" (digital numbers) to amplitude in milliPascals.
 // The microphone scale factor is ik_mPa. Returns integer and fractional part to 2 d.p.
 // Given that ampDN is at most 2^24, the output will always fit in a uint16.
-void amplitude_DN_to_mPa(const uint32_t ampDN, const float ik_mPa, uint16_t * intAmp_mPa,
-		                 uint8_t * frac2dpAmp_mPa) {
+void amplitudeDN_to_mPa(const uint32_t ampDN, const float ik_mPa, uint16_t * intAmp_mPa,
+		                uint8_t * frac2dpAmp_mPa) {
 	float amp = ((float) ampDN)*ik_mPa;
 	uint32_t intpart = 0;
-	float2IntFrac2dp(amp, &intpart, frac2dpAmp_mPa);
+	floatToIntAndFrac2dp(amp, &intpart, frac2dpAmp_mPa);
 	intAmp_mPa[0] = (uint16_t) intpart;
 }
 
@@ -93,7 +93,7 @@ void scaleSPL(uint64_t sumSq, const int32_t dBscale_int, const int32_t dBscale_f
 		      const int32_t weightingInt, const int32_t weightingFrac,
 		      int32_t * SPLintegerPart, int32_t * SPLfractionalPart) {
 	// Calculate: SPLvalue = (10.0*log10(sumSq)) + dBscale + weightTerm;
-	efficient_10log10(sumSq, SPLintegerPart, SPLfractionalPart);
+	efficient10log10(sumSq, SPLintegerPart, SPLfractionalPart);
 	SPLintegerPart[0] = SPLintegerPart[0] + dBscale_int + weightingInt;
 	SPLfractionalPart[0] = SPLfractionalPart[0] + dBscale_frac + weightingFrac;
 	// Apply correction if fractional part is not in range 0->9:
@@ -103,9 +103,9 @@ void scaleSPL(uint64_t sumSq, const int32_t dBscale_int, const int32_t dBscale_f
 // Convert 24-bit I2S sound data into signed 32 bit numbers.
 // The input I2S data are split across a uint16 array, and are left-channel only.
 // inBuflen is simply the number of elements in inBuf
-void decodeI2SdataLch(const uint16_t * inBuf, const uint32_t inBuflen, int32_t * outBuf) {
+void decodeI2SdataLch(const uint16_t * inBuf, const uint32_t inBufLength, int32_t * outBuf) {
 	uint32_t outCount = 0;
-	for (uint32_t i = 0; i < inBuflen; i += 4) {
+	for (uint32_t i = 0; i < inBufLength; i += 4) {
 		// join MS16bits and LS16bits, then shift the result down 8 bits because it is a 24-bit
 		// value, rather than a 32-bit one.
 		outBuf[outCount] = ((int32_t) ((((uint32_t) inBuf[i]) << 16) | ((uint32_t) inBuf[i+1]))) >> 8;

@@ -23,11 +23,11 @@ static const uint8_t LUT10log10[LUT_10LOG10_LENGTH] = {1, 1, 2, 2, 2, 3, 3, 3, 4
 
 // Obtain the value from the lookup table (LUT) and convert it to
 // integer and fractional parts:
-static void accessLUT10log10(uint32_t ind, uint32_t * intPart, uint32_t * fracPart) {
-	if (ind >= LUT_10LOG10_LENGTH) {
-		ind = LUT_10LOG10_LENGTH - 1;
+static void accessLUT10log10(uint32_t index, uint32_t * intPart, uint32_t * fracPart) {
+	if (index >= LUT_10LOG10_LENGTH) {
+		index = LUT_10LOG10_LENGTH - 1;
 	}
-	uint8_t x = LUT10log10[ind];
+	uint8_t x = LUT10log10[index];
 	intPart[0] = (uint32_t) (x >> fracPartLSBs);
 	fracPart[0] = ((uint32_t) x) - (intPart[0] << fracPartLSBs);
 }
@@ -36,7 +36,7 @@ static void accessLUT10log10(uint32_t ind, uint32_t * intPart, uint32_t * fracPa
 // Calculate 10*log10(P), returning the result as an integer part
 // and a 1-decimal-place fractional part.
 // i.e. result = integerPart + (fractionalPart/10);
-void efficient_10log10(uint64_t P, int32_t * integerPart, int32_t * fractionalPart) {
+void efficient10log10(uint64_t P, int32_t * integerPart, int32_t * fractionalPart) {
 	// NOTE: the CLZ (count leading zeros) instruction is not available on M0/M0+
 	// so use a simple shifting algorithm:
 	uint64_t limit = (((uint64_t) 1) << mantissa_kBits) - 1; // limit = ((2^kBits)-1)
@@ -53,8 +53,8 @@ void efficient_10log10(uint64_t P, int32_t * integerPart, int32_t * fractionalPa
 	uint32_t lutFracPart = 0;
 	accessLUT10log10(ind, &lutIntPart, &lutFracPart);
 	// Provide the result as an integer and fractional part (with the fractional part x10)
-	int32_t intPart = (int32_t) (intOffset10log10 + lutIntPart + (bShift*TLT2_intPart));
-	int32_t fracPart = (int32_t) (lutFracPart + ((bShift*TLT2_shiftedFracPart) >> TLT2_bitshift));
+	int32_t intPart = (int32_t) (intOffset10log10 + lutIntPart + (bShift * TLT2_intPart));
+	int32_t fracPart = (int32_t) (lutFracPart + ((bShift * TLT2_shiftedFracPart) >> TLT2_bitshift));
 	// Make a correction if fractional part is not in range 0->9:
 	correctIntFracNumber(&intPart, &fracPart);
 	integerPart[0] = intPart;

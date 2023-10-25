@@ -191,8 +191,8 @@ void DMA_Init(DMA_HandleTypeDef ** pHandle) {
 
 
 // Provide a print interface for print_functions.
-void printString(const char * str, uint16_t len) {
-	HAL_UART_Transmit(&uart, (uint8_t*) str, len, 0xFFFF);
+void printString(const char * str, uint16_t length) {
+	HAL_UART_Transmit(&uart, (uint8_t*) str, length, 0xFFFF);
 }
 
 

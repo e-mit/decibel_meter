@@ -24,16 +24,16 @@ void test_sound_system(void) {
 	// the expected result depends on Fs and NFILT (but keep the latter constant)
 	#define NFILT 128
 	#if (I2S_FREQ == 15625)
-		const float max_filt_expected = 192251.0f;
+		const float maxFiltExpected = 192251.0f;
 	#else
 		#error("Fs not implemented yet")
 	#endif
 
 	UNUSED(getFilteredMaxAmplitudeQ31(x1_32, X1_32_LEN - NFILT, true, true));
-	uint32_t filtmax = getFilteredMaxAmplitudeQ31(&(x1_32[X1_32_LEN - NFILT]), NFILT, false, true);
-	float pcDiff = (100.0f*(((float) filtmax) - max_filt_expected))/max_filt_expected;
-	print("   filtmax = %.2f\n", ((float) filtmax));
-	print("   Abs difference = %.2f\n", ((float) filtmax) - max_filt_expected);
+	uint32_t filtMax = getFilteredMaxAmplitudeQ31(&(x1_32[X1_32_LEN - NFILT]), NFILT, false, true);
+	float pcDiff = (100.0f*(((float) filtMax) - maxFiltExpected))/maxFiltExpected;
+	print("   filtMax = %.2f\n", ((float) filtMax));
+	print("   Abs difference = %.2f\n", ((float) filtMax) - maxFiltExpected);
 	print("   Percentage difference (Q31) = %.2f%%\n", pcDiff);
 	TEST_RESULT((pcDiff < PC_DIFF_LIMIT) && (pcDiff > -PC_DIFF_LIMIT));
 

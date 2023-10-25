@@ -33,13 +33,13 @@ extern void errorHandler(const char * func, const uint32_t line, const char * fi
 #define BIT_ROUNDING_MARGIN 4
 
 // State variables:
-static volatile bool SPL_calc_enabled = false;
-static volatile bool DMAintEnabled = false;
-static volatile bool SPL_calc_complete = false; // set true after every SPL calculation
+static volatile bool SPLcalcEnabled = false;
+static volatile bool DMAinterruptEnabled = false;
+static volatile bool SPLcalcComplete = false;
 static volatile uint32_t amplitudeSettlingPeriods = 0;
 
 // Derived data
-static volatile uint32_t maximumAmplitude = 0; // stores the maximum until cleared by user
+static volatile uint32_t maximumAmplitude = 0;
 static volatile int32_t SPL_int = 0, SPL_frac_1dp = 0;
 static volatile int32_t bandSPL_int[SOUND_FREQ_BANDS] = {0}, bandSPL_frac_1dp[SOUND_FREQ_BANDS] = {0};
 
@@ -68,14 +68,14 @@ static bool startMicSettlingPeriod(void);
 static void processHalfDMAbuffer(uint32_t halfBufferStart);
 static void calculateSPLQ31(void);
 static bool micSettlingComplete(void);
-static void reset_SPL_state(void);
+static void resetSPLstate(void);
 static uint32_t getFilteredMaxAmplitudeQ31(const int32_t * data, const uint32_t length,
 										   bool reset, bool updateMaxAmpFollower);
 
 //////////////////////////////////////////////////////////////////////////////
 
 bool isSPLcalcComplete(void) {
-	return SPL_calc_complete;
+	return SPLcalcComplete;
 }
 
 // Obtain the output SoundData, during a brief period of disabled DMA interrupt.
@@ -83,7 +83,7 @@ bool isSPLcalcComplete(void) {
 // but does not (under non-error conditions) cause loss of sound data because the
 // DMA buffer is still being filled with I2S data.
 void getSoundData(SoundData_t * data, bool getSPLdata, bool getMaxAmpData) {
-	if (DMAintEnabled) {
+	if (DMAinterruptEnabled) {
 		NVIC_DisableIRQ(DMA_Channel_IRQn);
 	}
 	// Use memory barrier instructions here, in case DMA interrupt had already been triggered
@@ -147,14 +147,14 @@ void getSoundData(SoundData_t * data, bool getSPLdata, bool getMaxAmpData) {
 	if (getMaxAmpData) {
 		uint16_t intPart = 0;
 		uint8_t fracPart = 0;
-		amplitude_DN_to_mPa(maximumAmplitude, ik_mPa, &intPart, &fracPart);
+		amplitudeDN_to_mPa(maximumAmplitude, ik_mPa, &intPart, &fracPart);
 		data->peak_amp_mPa_int = intPart;
 		data->peak_amp_mPa_fr_2dp = fracPart;
 	}
 
 	data->stable = micSettlingComplete();
 
-	if (DMAintEnabled) {
+	if (DMAinterruptEnabled) {
 		NVIC_EnableIRQ(DMA_Channel_IRQn);
 	}
 	// NOTE that any pending DMA interrupt will now fire, but will take ~2 cycles to start
@@ -216,12 +216,12 @@ bool enableMicrophone(bool bEnable) {
 		clearMaximumAmplitude();
 		amplitudeSettlingPeriods = 0;
 		NVIC_EnableIRQ(DMA_Channel_IRQn);
-		DMAintEnabled = true;
+		DMAinterruptEnabled = true;
 		micEnabled = true;
 	}
 	else {
 		NVIC_DisableIRQ(DMA_Channel_IRQn);
-		DMAintEnabled = false;
+		DMAinterruptEnabled = false;
 		enableSPLcalculation(false);
 		if (HAL_I2S_DMAStop(hI2S) != HAL_OK) {
 			return false;
@@ -233,9 +233,9 @@ bool enableMicrophone(bool bEnable) {
 
 void enableSPLcalculation(bool bEnable) {
 	if (bEnable) {
-		reset_SPL_state();
+		resetSPLstate();
 	}
-	SPL_calc_enabled = bEnable;
+	SPLcalcEnabled = bEnable;
 }
 
 // Called from the DMA ISR when the first half of the DMA buffer is full,
@@ -263,7 +263,7 @@ static void processHalfDMAbuffer(uint32_t halfBufferStart) {
 		// Need to allow the IIR filter to settle
 		amplitudeSettlingPeriods++;
 	}
-	if (SPL_calc_enabled) {
+	if (SPLcalcEnabled) {
 		// Calculate the A-weighted SPL and octave bands SPL
 		calculateSPLQ31();
 	}
@@ -381,15 +381,15 @@ static void calculateSPLQ31(void) {
 
 		spl_sum_count++;
 		if (spl_sum_count >= FILTER_SPL_N) {
-			SPL_calc_complete = true;
-			SPL_calc_enabled = false;
+			SPLcalcComplete = true;
+			SPLcalcEnabled = false;
 		}
 	#else
-		SPL_calc_complete = true;
+		SPLcalcComplete = true;
 	#endif
 }
 
-static void reset_SPL_state(void) {
+static void resetSPLstate(void) {
 	#ifdef FILTER_SPL
 		spl_int_sum = 0;
 		spl_frac1dp_sum = 0;
@@ -399,7 +399,7 @@ static void reset_SPL_state(void) {
 			band_spl_frac1dp_sum[i] = 0;
 		}
 	#endif
-	SPL_calc_complete = false;
+	SPLcalcComplete = false;
 }
 
 // Find and return the largest absolute amplitude in the input data buffer.

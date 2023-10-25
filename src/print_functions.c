@@ -7,7 +7,7 @@
 #include <stdlib.h>
 #include "print_functions.h"
 
-extern void printString(const char * str, uint16_t len); // this must be supplied in external code
+extern void printString(const char * str, uint16_t length); // this must be supplied in external code
 
 static char strbuf[512] = {0};
 
@@ -21,7 +21,7 @@ void print(const char* format, ...) {
 }
 
 // Print a 64-bit signed integer in hex.
-// This is needed because the Arm nano lib cannot do it with printf, sprintf etc
+// This is needed because the Arm nano library cannot do it with printf, sprintf etc
 // Just prints the number with apostrophes between each 16-bit chunk,
 // no newlines or spaces included.
 void print64hex(int64_t n) {
@@ -40,7 +40,7 @@ void print64hex(int64_t n) {
 }
 
 // Print a 64-bit unsigned integer in hex.
-// This is needed because the Arm nano lib cannot do it with printf, sprintf etc
+// This is needed because the Arm nano library cannot do it with printf, sprintf etc
 // Just prints the number with apostrophes between each 16-bit chunk,
 // no newlines or spaces included.
 void printU64hex(uint64_t x) {

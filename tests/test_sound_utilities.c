@@ -14,7 +14,7 @@ void test_float2IntFrac2dp(void) {
 	uint8_t fracpart2dp;
 	#define INTPART 35
 	#define FRACPART 67
-	float2IntFrac2dp(INTFRAC(INTPART, FRACPART), &intpart, &fracpart2dp);
+	floatToIntAndFrac2dp(INTFRAC(INTPART, FRACPART), &intpart, &fracpart2dp);
 	TEST_ASSERT_EQUAL_UINT32(INTPART, intpart);
 	TEST_ASSERT_EQUAL_UINT8(FRACPART, fracpart2dp);
 	#undef INTPART
@@ -22,7 +22,7 @@ void test_float2IntFrac2dp(void) {
 
 	#define INTPART 12
 	#define FRACPART 0
-	float2IntFrac2dp(INTFRAC(INTPART, FRACPART), &intpart, &fracpart2dp);
+	floatToIntAndFrac2dp(INTFRAC(INTPART, FRACPART), &intpart, &fracpart2dp);
 	TEST_ASSERT_EQUAL_UINT32(INTPART, intpart);
 	TEST_ASSERT_EQUAL_UINT8(FRACPART, fracpart2dp);
 	#undef INTPART
@@ -30,7 +30,7 @@ void test_float2IntFrac2dp(void) {
 
 	#define INTPART 0
 	#define FRACPART 0
-	float2IntFrac2dp(INTFRAC(INTPART, FRACPART), &intpart, &fracpart2dp);
+	floatToIntAndFrac2dp(INTFRAC(INTPART, FRACPART), &intpart, &fracpart2dp);
 	TEST_ASSERT_EQUAL_UINT32(INTPART, intpart);
 	TEST_ASSERT_EQUAL_UINT8(FRACPART, fracpart2dp);
 	#undef INTPART
@@ -38,7 +38,7 @@ void test_float2IntFrac2dp(void) {
 
 	#define INTPART 0
 	#define FRACPART 99
-	float2IntFrac2dp(INTFRAC(INTPART, FRACPART), &intpart, &fracpart2dp);
+	floatToIntAndFrac2dp(INTFRAC(INTPART, FRACPART), &intpart, &fracpart2dp);
 	TEST_ASSERT_EQUAL_UINT32(INTPART, intpart);
 	TEST_ASSERT_EQUAL_UINT8(FRACPART, fracpart2dp);
 	#undef INTPART
@@ -46,7 +46,7 @@ void test_float2IntFrac2dp(void) {
 
 	#define INTPART 5555
 	#define FRACPART 01
-	float2IntFrac2dp(INTFRAC(INTPART, FRACPART), &intpart, &fracpart2dp);
+	floatToIntAndFrac2dp(INTFRAC(INTPART, FRACPART), &intpart, &fracpart2dp);
 	TEST_ASSERT_EQUAL_UINT32(INTPART, intpart);
 	TEST_ASSERT_EQUAL_UINT8(FRACPART, fracpart2dp);
 	#undef INTPART
@@ -54,7 +54,7 @@ void test_float2IntFrac2dp(void) {
 
 	#define INTPART 5555
 	#define FRACPART 10
-	float2IntFrac2dp(INTFRAC(INTPART, FRACPART), &intpart, &fracpart2dp);
+	floatToIntAndFrac2dp(INTFRAC(INTPART, FRACPART), &intpart, &fracpart2dp);
 	TEST_ASSERT_EQUAL_UINT32(INTPART, intpart);
 	TEST_ASSERT_EQUAL_UINT8(FRACPART, fracpart2dp);
 	#undef INTPART
@@ -66,7 +66,7 @@ void test_float2IntFrac1dp(void) {
 	uint8_t fracpart2dp;
 	#define INTPART 35
 	#define FRACPART 6
-	float2IntFrac1dp(INTFRAC(INTPART, FRACPART), &intpart, &fracpart2dp);
+	floatToIntAndFrac1dp(INTFRAC(INTPART, FRACPART), &intpart, &fracpart2dp);
 	TEST_ASSERT_EQUAL_UINT32(INTPART, intpart);
 	TEST_ASSERT_EQUAL_UINT8(FRACPART, fracpart2dp);
 	#undef INTPART
@@ -74,7 +74,7 @@ void test_float2IntFrac1dp(void) {
 
 	#define INTPART 1200
 	#define FRACPART 0
-	float2IntFrac1dp(INTFRAC(INTPART, FRACPART), &intpart, &fracpart2dp);
+	floatToIntAndFrac1dp(INTFRAC(INTPART, FRACPART), &intpart, &fracpart2dp);
 	TEST_ASSERT_EQUAL_UINT32(INTPART, intpart);
 	TEST_ASSERT_EQUAL_UINT8(FRACPART, fracpart2dp);
 	#undef INTPART
@@ -82,7 +82,7 @@ void test_float2IntFrac1dp(void) {
 
 	#define INTPART 0
 	#define FRACPART 0
-	float2IntFrac1dp(INTFRAC(INTPART, FRACPART), &intpart, &fracpart2dp);
+	floatToIntAndFrac1dp(INTFRAC(INTPART, FRACPART), &intpart, &fracpart2dp);
 	TEST_ASSERT_EQUAL_UINT32(INTPART, intpart);
 	TEST_ASSERT_EQUAL_UINT8(FRACPART, fracpart2dp);
 	#undef INTPART
@@ -90,7 +90,7 @@ void test_float2IntFrac1dp(void) {
 
 	#define INTPART 0
 	#define FRACPART 9
-	float2IntFrac1dp(INTFRAC(INTPART, FRACPART), &intpart, &fracpart2dp);
+	floatToIntAndFrac1dp(INTFRAC(INTPART, FRACPART), &intpart, &fracpart2dp);
 	TEST_ASSERT_EQUAL_UINT32(INTPART, intpart);
 	TEST_ASSERT_EQUAL_UINT8(FRACPART, fracpart2dp);
 	#undef INTPART
@@ -98,7 +98,7 @@ void test_float2IntFrac1dp(void) {
 
 	#define INTPART 5
 	#define FRACPART 1
-	float2IntFrac1dp(INTFRAC(INTPART, FRACPART), &intpart, &fracpart2dp);
+	floatToIntAndFrac1dp(INTFRAC(INTPART, FRACPART), &intpart, &fracpart2dp);
 	TEST_ASSERT_EQUAL_UINT32(INTPART, intpart);
 	TEST_ASSERT_EQUAL_UINT8(FRACPART, fracpart2dp);
 	#undef INTPART
@@ -236,30 +236,30 @@ void test_getPo2factor(void) {
 }
 
 void test_amplitude_DN_to_mPa(void) {
-	//void amplitude_DN_to_mPa(const uint32_t ampDN, const float ik_mPa, uint16_t * intAmp_mPa,
+	//void amplitudeDN_to_mPa(const uint32_t ampDN, const float ik_mPa, uint16_t * intAmp_mPa,
 	//		                 uint8_t * frac2dpAmp_mPa)
 
 	float ik_mPa = 1.23e-3f;
 	uint16_t intAmp_mPa;
 	uint8_t frac2dpAmp_mPa;
 
-	amplitude_DN_to_mPa(0, ik_mPa, &intAmp_mPa, &frac2dpAmp_mPa);
+	amplitudeDN_to_mPa(0, ik_mPa, &intAmp_mPa, &frac2dpAmp_mPa);
 	TEST_ASSERT_EQUAL_UINT16(0, intAmp_mPa);
 	TEST_ASSERT_EQUAL_UINT8(0, frac2dpAmp_mPa);
 
-	amplitude_DN_to_mPa(3, ik_mPa, &intAmp_mPa, &frac2dpAmp_mPa);
+	amplitudeDN_to_mPa(3, ik_mPa, &intAmp_mPa, &frac2dpAmp_mPa);
 	TEST_ASSERT_EQUAL_UINT16(0, intAmp_mPa);
 	TEST_ASSERT_EQUAL_UINT8(0, frac2dpAmp_mPa);
 
-	amplitude_DN_to_mPa(10, ik_mPa, &intAmp_mPa, &frac2dpAmp_mPa);
+	amplitudeDN_to_mPa(10, ik_mPa, &intAmp_mPa, &frac2dpAmp_mPa);
 	TEST_ASSERT_EQUAL_UINT16(0, intAmp_mPa);
 	TEST_ASSERT_EQUAL_UINT8(1, frac2dpAmp_mPa);
 
-	amplitude_DN_to_mPa(100, ik_mPa, &intAmp_mPa, &frac2dpAmp_mPa);
+	amplitudeDN_to_mPa(100, ik_mPa, &intAmp_mPa, &frac2dpAmp_mPa);
 	TEST_ASSERT_EQUAL_UINT16(0, intAmp_mPa);
 	TEST_ASSERT_EQUAL_UINT8(12, frac2dpAmp_mPa);
 
-	amplitude_DN_to_mPa(767879, ik_mPa, &intAmp_mPa, &frac2dpAmp_mPa);
+	amplitudeDN_to_mPa(767879, ik_mPa, &intAmp_mPa, &frac2dpAmp_mPa);
 	TEST_ASSERT_EQUAL_UINT16(944, intAmp_mPa);
 	TEST_ASSERT_EQUAL_UINT8(49, frac2dpAmp_mPa);
 }

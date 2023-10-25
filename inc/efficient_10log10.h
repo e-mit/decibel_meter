@@ -6,7 +6,7 @@
 
 #include <stdint.h>
 
-void efficient_10log10(uint64_t P, int32_t * integerPart, int32_t * fractionalPart);
+void efficient10log10(uint64_t P, int32_t * integerPart, int32_t * fractionalPart);
 void correctIntFracNumber(int32_t * intPart, int32_t * fracPart);
 
 #endif
