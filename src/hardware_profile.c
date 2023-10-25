@@ -10,8 +10,9 @@
 #include "microphone_constants.h"
 
 static UART_HandleTypeDef uart;
-TIM_HandleTypeDef settleTimer;
-I2S_HandleTypeDef i2s1;
+static TIM_HandleTypeDef settleTimer;
+static I2S_HandleTypeDef i2s1;
+
 DMA_HandleTypeDef dma1;
 
 ////////////////////////////////////////
