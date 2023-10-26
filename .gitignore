@@ -7,3 +7,8 @@
 /unity/
 /Debug_Tests/
 /Release_Tests/
+*.tar.bz2
+/release/
+/debug/
+/system-tests/
+/gcc-arm-none-eabi*
