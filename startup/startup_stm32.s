@@ -1,5 +1,4 @@
-/**
-  ******************************************************************************
+/*******************************************************************************
   * @file      startup_stm32g071xx.s
   * @author    MCD Application Team
   * @brief     STM32G071xx devices vector table for SW4STM32 toolchain.
