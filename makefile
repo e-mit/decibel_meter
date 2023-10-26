@@ -1,7 +1,7 @@
 # Makefile for release, debug and system-tests builds.
-# Builds for the STM32G071xx chip (Cortex M0+)
 #
-# Uses gcc-arm-none-eabi 9-2020-q2-update, available from:
+# These builds target the STM32G071xx chip (Cortex M0+).
+# This uses gcc-arm-none-eabi 9-2020-q2-update, available from:
 # https://developer.arm.com/-/media/Files/downloads/gnu-rm/9-2020q2/gcc-arm-none-eabi-9-2020-q2-update-x86_64-linux.tar.bz2?revision=05382cca-1721-44e1-ae19-1e7c3dc96118&rev=05382cca172144e1ae191e7c3dc96118&hash=FDE675133A099796BD1507A3FF215AC4
 
 NAME = decibel_meter
