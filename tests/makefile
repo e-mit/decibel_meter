@@ -1,9 +1,14 @@
-CLEANUP = rm -f
-TARGET_EXTENSION=.out
-C_COMPILER=gcc
-UNITY_ROOT=../unity
+# Build unit tests using the unity framework.
+#
+# Note that these unit tests are intended to run on any computer.
+# The separate system-tests are intended to run on the STM32 target.
 
-CFLAGS=-std=gnu11
+TARGET_EXT = out
+CC = gcc
+UNITY_ROOT = ../Unity/src
+TEST_PREFIX = unitytest_
+
+CFLAGS = -std=gnu11
 CFLAGS += -Wall
 CFLAGS += -Wextra
 CFLAGS += -Werror
@@ -25,25 +30,17 @@ CFLAGS += -Wundef
 CFLAGS += -Wold-style-definition
 CFLAGS += -Wno-misleading-indentation
 
-TARGET_BASE1=test_efficient_10log10
-TARGET1 = $(TARGET_BASE1)$(TARGET_EXTENSION)
-SRC_FILES1=$(UNITY_ROOT)/unity.c ../src/efficient_10log10.c $(TARGET_BASE1).c
+#####################################################################
 
-TARGET_BASE2=test_sound_utilities
-TARGET2 = $(TARGET_BASE2)$(TARGET_EXTENSION)
-SRC_FILES2=$(UNITY_ROOT)/unity.c ../src/efficient_10log10.c ../src/sound_utilities.c $(TARGET_BASE2).c
+TEST_SRCS = $(shell find -name "$(TEST_PREFIX)*.c" -type f)
+TARGETS = $(foreach x, $(basename $(TEST_SRCS)), $(x).$(TARGET_EXT))
+SRC = $(foreach x, $(notdir $(TEST_SRCS)), ../src/$(subst $(TEST_PREFIX),,$(x)))
+INC_DIRS = -I$(UNITY_ROOT) -I../inc
 
-INC_DIRS=-I$(UNITY_ROOT) -I../inc
+all: clean $(TARGETS)
 
-all: clean build run
-
-build: 
-	$(C_COMPILER) $(CFLAGS) $(INC_DIRS) $(SRC_FILES1) -o $(TARGET1)
-	$(C_COMPILER) $(CFLAGS) $(INC_DIRS) $(SRC_FILES2) -o $(TARGET2) -lm
-
-run:
-	- @./$(TARGET1)
-	- @./$(TARGET2)
+%.$(TARGET_EXT): %.c
+	$(CC) $(CFLAGS) $(INC_DIRS) $(UNITY_ROOT)/unity.c $(SRC) $< -o $@ -lm
 
 clean:
-	$(CLEANUP) $(TARGET1) $(TARGET2)
+	rm -f *.$(TARGET_EXT)
