@@ -20,4 +20,6 @@ jobs:
     - name: run all
       run: |
         cd tests
-        ./unitytest_sound_utilities.out
+        for f in *.out; do
+          ./$f
+        done
