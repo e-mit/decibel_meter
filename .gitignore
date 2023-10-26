@@ -10,3 +10,8 @@
 /debug/
 /system-tests/
 /gcc-arm-none-eabi*
+.settings/
+.cproject*
+.project*
+*.launch
+*.xml
