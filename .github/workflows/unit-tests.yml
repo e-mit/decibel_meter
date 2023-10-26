@@ -1,9 +1,9 @@
-name: Unit test build
+name: Unit tests
 
 on: [push, workflow_dispatch]
 
 jobs:
-  build:
+  test:
     runs-on: ubuntu-latest
     steps:
     - run: echo "Triggered by a ${{ github.event_name }} and running branch ${{ github.ref }} on a ${{ runner.os }} server"
