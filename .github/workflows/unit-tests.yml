@@ -1,0 +1,23 @@
+name: Unit tests
+
+on: [push, workflow_dispatch]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+    - run: echo "Triggered by a ${{ github.event_name }} and running branch ${{ github.ref }} on a ${{ runner.os }} server"
+    - uses: actions/checkout@v3
+    - name: Install unity
+      run: |
+        git config --global user.email "test@example.com"
+        git config --global user.name "test"
+        git clone https://github.com/ThrowTheSwitch/Unity
+    - name: make all
+      run: |
+        cd tests
+        make all
+    - name: run all
+      run: |
+        cd tests
+        ./unitytest_sound_utilities.out

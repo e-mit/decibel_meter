@@ -1,0 +1,18 @@
+name: Release build
+
+on: [push, workflow_dispatch]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - run: echo "Triggered by a ${{ github.event_name }} and running branch ${{ github.ref }} on a ${{ runner.os }} server"
+    - uses: actions/checkout@v3
+    - name: Install compiler
+      run: |
+        wget https://developer.arm.com/-/media/Files/downloads/gnu-rm/9-2020q2/gcc-arm-none-eabi-9-2020-q2-update-x86_64-linux.tar.bz2
+        tar -xvjf gcc-arm-none-eabi-9-2020-q2-update-x86_64-linux.tar.bz2
+    - name: make release
+      run: |
+        make release
+
