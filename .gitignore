@@ -1,7 +1,6 @@
 /Debug/
 /Release/
 /Drivers/
-*.a
 *.prefs
 *.out
 /Unity/
