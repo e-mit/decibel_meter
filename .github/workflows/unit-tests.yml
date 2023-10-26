@@ -1,0 +1,15 @@
+name: Unit tests
+
+on:
+  workflow_run:
+    workflows: ["Unit test build"]
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: run all
+      run: |
+        cd tests
+        ./unitytest_sound_utilities.out
