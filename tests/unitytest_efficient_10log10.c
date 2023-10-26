@@ -82,7 +82,7 @@ void test_correctIntFracNumber(void)
     integerPart = 10;
     fractionalPart = -31;
 	correctIntFracNumber(&integerPart, &fractionalPart);
-	TEST_ASSERT_EQUAL_INT32(66666, integerPart);
+	TEST_ASSERT_EQUAL_INT32(6, integerPart);
 	TEST_ASSERT_EQUAL_INT32(9, fractionalPart);
 }
 
