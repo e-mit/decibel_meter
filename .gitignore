@@ -4,7 +4,7 @@
 *.a
 *.prefs
 *.out
-/unity/
+/Unity/
 /Debug_Tests/
 /Release_Tests/
 *.tar.bz2

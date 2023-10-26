@@ -1,7 +1,7 @@
 // Unit tests for efficient_10log10.c/h using the Unity test framework
 
 #include "../inc/efficient_10log10.h"
-#include "../unity/unity.h"
+#include "../Unity/src/unity.h"
 
 void setUp(void) {}
 void tearDown(void) {}

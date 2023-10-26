@@ -1,7 +1,7 @@
 // Unit tests for sound_utilities.c/h using the Unity test framework
 
 #include "../inc/sound_utilities.h"
-#include "../unity/unity.h"
+#include "../Unity/src/unity.h"
 
 void setUp(void) {}
 void tearDown(void) {}
