@@ -16,14 +16,19 @@ ifeq ($(MAKECMDGOALS),release)
 	ASM_FLAGS =
 	C_FLAGS = -O3
 	LNK_FLAGS =
+	CLEAN_DIRS = $(MAKECMDGOALS)
 else ifeq ($(MAKECMDGOALS),debug)
 	ASM_FLAGS = -g3
 	C_FLAGS = -g3 -DDEBUG -O0
 	LNK_FLAGS = -u_printf_float
+	CLEAN_DIRS = $(MAKECMDGOALS)
 else ifeq ($(MAKECMDGOALS),system-tests)
 	ASM_FLAGS = -g3
 	C_FLAGS = -g3 -DTESTS -DDEBUG -O0
 	LNK_FLAGS = -u_printf_float
+	CLEAN_DIRS = $(MAKECMDGOALS)
+else ifeq ($(MAKECMDGOALS),clean)
+	CLEAN_DIRS = release debug system-tests
 endif
 
 CC = $(CC_VER)/bin/arm-none-eabi-gcc
@@ -44,8 +49,6 @@ system-tests: clean mkdirs build
 build: $(STARTUP_OBJ) $(OBJECTS)
 	$(CC) -o $(TARGET_ELF) $^ -larm_cortexM0l_math -mcpu=cortex-m0plus -T $(LNK_SCRIPT) --specs=nosys.specs -Wl,-Map=$(TARGET_MAP) -Wl,--gc-sections -static -Wl,--start-group -larm_cortexM0l_math -Wl,--end-group -L./ $(LNK_FLAGS) --specs=nano.specs -mfloat-abi=soft -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
 
-compile: $(STARTUP_OBJ) $(OBJECTS)
-
 $(STARTUP_OBJ):
 	$(CC) -mcpu=cortex-m0plus $(ASM_FLAGS) -c -x assembler-with-cpp -MMD -MP -MF $(subst .o,.d,$(STARTUP_OBJ)) -MT $(STARTUP_OBJ) --specs=nano.specs -mfloat-abi=soft -mthumb -o $(STARTUP_OBJ) $(STARTUP_FILE)
 
@@ -57,4 +60,4 @@ mkdirs:
 	$(foreach src, $(dir $(SOURCES)), $(shell mkdir -p $(MAKECMDGOALS)/$(src)))
 
 clean:
-	rm -rf $(MAKECMDGOALS)
+	rm -rf $(CLEAN_DIRS)
