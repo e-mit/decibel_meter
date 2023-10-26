@@ -6,7 +6,7 @@
 
 NAME = decibel_meter
 CC_VER = gcc-arm-none-eabi-9-2020-q2-update
-INC_FLAGS = -I./inc -I./Drivers/STM32G0xx_HAL_Driver/Inc -I./Drivers/STM32G0xx_HAL_Driver/Inc/Legacy -I./Drivers/CMSIS/Device/ST/STM32G0xx/Include -I./Drivers/CMSIS/Include
+INC_FLAGS = -I./inc -I./drivers/STM32G0xx_HAL_Driver/Inc -I./drivers/STM32G0xx_HAL_Driver/Inc/Legacy -I./drivers/CMSIS/Device/ST/STM32G0xx/Include -I./drivers/CMSIS/Include
 LNK_SCRIPT = LinkerScript.ld
 STARTUP_FILE = startup/startup_stm32.s
 LIB_DIR = ./lib
@@ -33,7 +33,7 @@ else ifeq ($(MAKECMDGOALS),clean)
 endif
 
 CC = $(CC_VER)/bin/arm-none-eabi-gcc
-SOURCES = $(shell find src/ Drivers/ -name "*.c" -type f)
+SOURCES = $(shell find src/ drivers/ -name "*.c" -type f)
 OBJECTS = $(foreach x, $(basename $(SOURCES)), $(MAKECMDGOALS)/$(x).o)
 STARTUP_OBJ = $(MAKECMDGOALS)/$(subst .s,.o,$(STARTUP_FILE))
 TARGET_ELF = $(MAKECMDGOALS)/$(NAME).elf
