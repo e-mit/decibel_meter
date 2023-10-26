@@ -9,7 +9,7 @@ CC_VER = gcc-arm-none-eabi-9-2020-q2-update
 INC_FLAGS = -I./inc -I./Drivers/STM32G0xx_HAL_Driver/Inc -I./Drivers/STM32G0xx_HAL_Driver/Inc/Legacy -I./Drivers/CMSIS/Device/ST/STM32G0xx/Include -I./Drivers/CMSIS/Include
 LNK_SCRIPT = LinkerScript.ld
 STARTUP_FILE = startup/startup_stm32.s
-LIB_DIR = ./
+LIB_DIR = ./lib
 
 #############################################
 
