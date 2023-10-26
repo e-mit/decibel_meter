@@ -6,6 +6,12 @@ UNITY_ROOT=../unity
 CFLAGS=-std=gnu11
 CFLAGS += -Wall
 CFLAGS += -Wextra
+CFLAGS += -Werror
+CFLAGS += -Wshadow
+CFLAGS += -Wpedantic
+CFLAGS += -Wdouble-promotion
+CFLAGS += -Wformat-overflow
+CFLAGS += -Wformat-truncation
 CFLAGS += -Wpointer-arith
 CFLAGS += -Wcast-align
 CFLAGS += -Wwrite-strings
@@ -17,7 +23,7 @@ CFLAGS += -Wno-unknown-pragmas
 CFLAGS += -Wstrict-prototypes
 CFLAGS += -Wundef
 CFLAGS += -Wold-style-definition
-#CFLAGS += -Wno-misleading-indentation
+CFLAGS += -Wno-misleading-indentation
 
 TARGET_BASE1=test_efficient_10log10
 TARGET1 = $(TARGET_BASE1)$(TARGET_EXTENSION)
@@ -29,11 +35,13 @@ SRC_FILES2=$(UNITY_ROOT)/unity.c ../src/efficient_10log10.c ../src/sound_utiliti
 
 INC_DIRS=-I$(UNITY_ROOT) -I../inc
 
-all: clean default
+all: clean build run
 
-default: 
+build: 
 	$(C_COMPILER) $(CFLAGS) $(INC_DIRS) $(SRC_FILES1) -o $(TARGET1)
 	$(C_COMPILER) $(CFLAGS) $(INC_DIRS) $(SRC_FILES2) -o $(TARGET2) -lm
+
+run:
 	- @./$(TARGET1)
 	- @./$(TARGET2)
 
