@@ -9,6 +9,7 @@ CC_VER = gcc-arm-none-eabi-9-2020-q2-update
 INC_FLAGS = -I./inc -I./Drivers/STM32G0xx_HAL_Driver/Inc -I./Drivers/STM32G0xx_HAL_Driver/Inc/Legacy -I./Drivers/CMSIS/Device/ST/STM32G0xx/Include -I./Drivers/CMSIS/Include
 LNK_SCRIPT = LinkerScript.ld
 STARTUP_FILE = startup/startup_stm32.s
+LIB_DIR = ./lib
 
 #############################################
 
@@ -47,7 +48,7 @@ debug: clean mkdirs build
 system-tests: clean mkdirs build
 
 build: $(STARTUP_OBJ) $(OBJECTS)
-	$(CC) -o $(TARGET_ELF) $^ -larm_cortexM0l_math -mcpu=cortex-m0plus -T $(LNK_SCRIPT) --specs=nosys.specs -Wl,-Map=$(TARGET_MAP) -Wl,--gc-sections -static -Wl,--start-group -larm_cortexM0l_math -Wl,--end-group -L./ $(LNK_FLAGS) --specs=nano.specs -mfloat-abi=soft -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
+	$(CC) -o $(TARGET_ELF) $^ -larm_cortexM0l_math -mcpu=cortex-m0plus -T $(LNK_SCRIPT) --specs=nosys.specs -Wl,-Map=$(TARGET_MAP) -Wl,--gc-sections -static -Wl,--start-group -larm_cortexM0l_math -Wl,--end-group -L$(LIB_DIR) $(LNK_FLAGS) --specs=nano.specs -mfloat-abi=soft -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
 
 $(STARTUP_OBJ):
 	$(CC) -mcpu=cortex-m0plus $(ASM_FLAGS) -c -x assembler-with-cpp -MMD -MP -MF $(subst .o,.d,$(STARTUP_OBJ)) -MT $(STARTUP_OBJ) --specs=nano.specs -mfloat-abi=soft -mthumb -o $(STARTUP_OBJ) $(STARTUP_FILE)
