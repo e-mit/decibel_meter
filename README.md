@@ -56,13 +56,16 @@ The UART module is used for printing results to a computer terminal (MCU to PC d
 
 The unit tests use the Unity framework, compiled with gcc, and are intended to run on any system (not Arm/STM32 specific).
 
-1. Clone the Unity repository into the project directory:
-
-```git clone https://github.com/ThrowTheSwitch/Unity```
+1. Clone the Unity repository into the project directory: ```git clone https://github.com/ThrowTheSwitch/Unity```
 
 2. Build the tests with ```make all``` in the tests directory.
 
 3. Run the resulting \*.out executables.
+
+
+## Changelog
+
+Changes, fixes and additions in each software release version are listed in the [CHANGELOG](CHANGELOG.md)
 
 
 ## License
