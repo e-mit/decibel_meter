@@ -19,17 +19,17 @@ LIB_DIR = ./lib
 
 ifeq ($(MAKECMDGOALS),release)
 	ASM_FLAGS =
-	C_FLAGS = -O3
+	CFLAGS = -O3
 	LNK_FLAGS =
 	CLEAN_DIRS = $(MAKECMDGOALS)
 else ifeq ($(MAKECMDGOALS),debug)
 	ASM_FLAGS = -g3
-	C_FLAGS = -g3 -DDEBUG -O0
+	CFLAGS = -g3 -DDEBUG -O0
 	LNK_FLAGS = -u_printf_float
 	CLEAN_DIRS = $(MAKECMDGOALS)
 else ifeq ($(MAKECMDGOALS),system-tests)
 	ASM_FLAGS = -g3
-	C_FLAGS = -g3 -DTESTS -DDEBUG -O0
+	CFLAGS = -g3 -DTESTS -DDEBUG -O0
 	LNK_FLAGS = -u_printf_float
 	CLEAN_DIRS = $(MAKECMDGOALS)
 else ifeq ($(MAKECMDGOALS),clean)
@@ -42,6 +42,23 @@ OBJECTS = $(foreach x, $(basename $(SOURCES)), $(MAKECMDGOALS)/$(x).o)
 STARTUP_OBJ = $(MAKECMDGOALS)/$(subst .s,.o,$(STARTUP_FILE))
 TARGET_ELF = $(MAKECMDGOALS)/$(NAME).elf
 TARGET_MAP = $(MAKECMDGOALS)/$(NAME).map
+
+CFLAGS += -Wall
+CFLAGS += -Wextra
+CFLAGS += -Werror
+CFLAGS += -Wshadow
+CFLAGS += -Wformat-overflow
+CFLAGS += -Wformat-truncation
+CFLAGS += -Wpointer-arith
+CFLAGS += -Wwrite-strings
+CFLAGS += -Wswitch-default
+CFLAGS += -Wunreachable-code
+CFLAGS += -Winit-self
+CFLAGS += -Wmissing-field-initializers
+CFLAGS += -Wno-unknown-pragmas
+CFLAGS += -Wstrict-prototypes
+CFLAGS += -Wold-style-definition
+CFLAGS += -Wno-misleading-indentation
 
 #############################################
 
@@ -63,10 +80,10 @@ $(STARTUP_OBJ):
           -mthumb -o $(STARTUP_OBJ) $(STARTUP_FILE)
 
 $(MAKECMDGOALS)/%.o: %.c
-	$(CC) $< -mcpu=cortex-m0plus -std=gnu11 $(C_FLAGS) -DSTM32G071xx \
+	$(CC) $< -mcpu=cortex-m0plus -std=gnu11 $(CFLAGS) -DSTM32G071xx \
           '-D__weak=__attribute__((weak))' -DARM_MATH_CM0PLUS \
           '-D__packed="__attribute__((__packed__))"' -DUSE_HAL_DRIVER -c $(INC_FLAGS) \
-          -ffunction-sections -Wall -Wextra -fstack-usage -MMD -MP -MF $(subst .o,.d,$@) \
+          -ffunction-sections -fstack-usage -MMD -MP -MF $(subst .o,.d,$@) \
           -MT $@ --specs=nano.specs -mfloat-abi=soft -mthumb -o $@
 
 mkdirs:
