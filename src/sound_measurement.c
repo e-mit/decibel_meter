@@ -2,13 +2,14 @@
 // This code is ARM/STM32-specific but is not limited to a particular device.
 //
 // Brief explanation of use:
-// 1) Initialise I2S, DMA and timer peripherals externally, then pass their
-//    handles to soundInit().
-// 2) Call enableMicrophone() to start the sound detection and processing.
-// 3) Use enableSPLcalculation(), isSPLcalcComplete() and getSoundData() to
-//    start/stop, monitor and obtain output data.
-// 4) clearMaximumAmplitude() is used to reset the peak amplitude
-//    (output in addition to SPL).
+// 1) Create external functions which initialise I2S, DMA and timer peripherals,
+//    then pass function pointers to soundInit().
+// 2) Call enableMicrophone() to start the collection of I2S data in the circular
+//    DMA buffer.
+// 3) Call startSPLcalculation() when ready to acquire data and calculate output.
+// 4) Use getSoundData() to check for completion of calculation and obtain result.
+// 5) Use clearMaximumAmplitude() at any time to reset the peak amplitude (which
+//    is output in addition to SPL).
 
 #include <sound_utilities.h>
 #include <stdint.h>
@@ -37,6 +38,7 @@ extern void errorHandler(const char * func, const uint32_t line, const char * fi
 #define Q31_BITSHIFT 31
 
 // State variables:
+static bool micEnabled = false;
 static volatile bool SPLcalcEnabled = false;
 static volatile bool DMAinterruptEnabled = false;
 static volatile bool SPLcalcComplete = false;
@@ -58,14 +60,12 @@ static I2S_HandleTypeDef * hI2S;
 static DMA_HandleTypeDef * hDMA;
 static IRQn_Type DMA_Channel_IRQn;
 
-#ifdef FILTER_SPL
-	// SPL filter state variables
-	static volatile int32_t spl_int_sum = 0;
-	static volatile int32_t spl_frac1dp_sum = 0;
-	static volatile int32_t band_spl_int_sum[SOUND_FREQ_BANDS] = {0};
-	static volatile int32_t band_spl_frac1dp_sum[SOUND_FREQ_BANDS] = {0};
-	static volatile uint32_t spl_sum_count = 0;
-#endif
+// SPL state variables
+static volatile int32_t spl_int_sum = 0;
+static volatile int32_t spl_frac1dp_sum = 0;
+static volatile int32_t band_spl_int_sum[SOUND_FREQ_BANDS] = {0};
+static volatile int32_t band_spl_frac1dp_sum[SOUND_FREQ_BANDS] = {0};
+static volatile uint32_t spl_sum_count = 0;
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -80,17 +80,17 @@ static uint32_t getFilteredMaxAmplitudeQ31(const int32_t * data,
 
 //////////////////////////////////////////////////////////////////////////////
 
-bool isSPLcalcComplete(void)
-{
-	return SPLcalcComplete;
-}
-
 // Obtain the output SoundData, during a brief period of disabled DMA interrupt.
 // Note that disabling the interrupt prevents the possibility of corrupted data
 // but does not (under non-error conditions) cause loss of sound data because the
 // DMA buffer is still being filled with I2S data.
-void getSoundData(SoundData_t * data, bool getSPLdata, bool getMaxAmpData)
+// Return false if no data available.
+bool getSoundData(SoundData_t * data, bool getSPLdata, bool getMaxAmpData)
 {
+	if ((!micEnabled) || (!SPLcalcComplete))
+	{
+		return false;
+	}
 	if (DMAinterruptEnabled)
 	{
 		NVIC_DisableIRQ(DMA_Channel_IRQn);
@@ -105,8 +105,6 @@ void getSoundData(SoundData_t * data, bool getSPLdata, bool getMaxAmpData)
 
 	if (getSPLdata)
 	{
-
-	#ifdef FILTER_SPL
 		if (spl_sum_count == 0)
 		{
 			// No data: prevent divide by zero
@@ -130,42 +128,6 @@ void getSoundData(SoundData_t * data, bool getSPLdata, bool getMaxAmpData)
 						        band_spl_frac1dp_sum[i], spl_sum_count);
 			}
 		}
-	#else
-		if (SPL_int < 0)
-		{
-			data->SPL_dBA_int = 0;
-			data->SPL_dBA_fr_1dp = 0;
-		}
-		else if (SPL_int > UINT8_MAX)
-		{
-			data->SPL_dBA_int = UINT8_MAX;
-			data->SPL_dBA_fr_1dp = 9;
-		}
-		else
-		{
-			data->SPL_dBA_int = (uint8_t) SPL_int;
-			data->SPL_dBA_fr_1dp = (uint8_t) SPL_frac_1dp;
-		}
-
-		for (uint32_t i = 0; i < SOUND_FREQ_BANDS; i++)
-		{
-			if (bandSPL_int[i] < 0)
-			{
-				data->SPL_bands_dB_int[i] = 0;
-				data->SPL_bands_dB_fr_1dp[i] = 0;
-			}
-			else if (bandSPL_int[i] > UINT8_MAX)
-			{
-				data->SPL_bands_dB_int[i] = UINT8_MAX;
-				data->SPL_bands_dB_fr_1dp[i] = 0;
-			}
-			else
-			{
-				data->SPL_bands_dB_int[i] = (uint8_t) bandSPL_int[i];
-				data->SPL_bands_dB_fr_1dp[i] = (uint8_t) bandSPL_frac_1dp[i];
-			}
-		}
-	#endif
 	}
 
 	if (getMaxAmpData)
@@ -185,6 +147,7 @@ void getSoundData(SoundData_t * data, bool getSPLdata, bool getMaxAmpData)
 	}
 	// NOTE that any pending DMA interrupt will now fire, but will
 	// take ~2 cycles to start
+	return true;
 }
 
 void DMA1_Channel1_IRQHandler(void)
@@ -238,9 +201,9 @@ static bool micSettlingComplete(void)
 
 // Enable: starts the I2S clock, warmup timer, and DMA interrupts
 // Disable: stops the DMA interrupts and stops I2S clock.
+// Return false on failure.
 bool enableMicrophone(bool bEnable)
 {
-	static bool micEnabled = false;
 	if (bEnable == micEnabled)
 	{
 		return true;
@@ -257,12 +220,15 @@ bool enableMicrophone(bool bEnable)
 		NVIC_EnableIRQ(DMA_Channel_IRQn);
 		DMAinterruptEnabled = true;
 		micEnabled = true;
+		SPLcalcEnabled = false;
+		SPLcalcComplete = false;
 	}
 	else
 	{
 		NVIC_DisableIRQ(DMA_Channel_IRQn);
 		DMAinterruptEnabled = false;
-		enableSPLcalculation(false);
+		SPLcalcEnabled = false;
+		SPLcalcComplete = false;
 		if (HAL_I2S_DMAStop(hI2S) != HAL_OK)
 		{
 			return false;
@@ -272,13 +238,22 @@ bool enableMicrophone(bool bEnable)
 	return true;
 }
 
-void enableSPLcalculation(bool bEnable)
+// The microphone/I2S/DMA is already running: start the
+// conversion of I2S data to SPL.
+// Return false if microphone is not enabled (fail).
+bool startSPLcalculation(void)
 {
-	if (bEnable)
+	if (!micEnabled)
 	{
-		resetSPLstate();
+		return false;
 	}
-	SPLcalcEnabled = bEnable;
+	if (SPLcalcEnabled)
+	{
+		return true;
+	}
+	resetSPLstate();
+	SPLcalcEnabled = true;
+	return true;
 }
 
 // Called from the DMA ISR when the first half of the DMA buffer is full,
@@ -438,39 +413,33 @@ static void calculateSPLQ31(void)
 				 (int32_t *) &(bandSPL_int[i]), (int32_t *) &(bandSPL_frac_1dp[i]));
 	}
 
-	#ifdef FILTER_SPL
-		spl_int_sum += SPL_int;
-		spl_frac1dp_sum += SPL_frac_1dp;
+	spl_int_sum += SPL_int;
+	spl_frac1dp_sum += SPL_frac_1dp;
 
-		for (uint32_t i = 0; i < SOUND_FREQ_BANDS; i++)
-		{
-			band_spl_int_sum[i] += bandSPL_int[i];
-			band_spl_frac1dp_sum[i] += bandSPL_frac_1dp[i];
-		}
+	for (uint32_t i = 0; i < SOUND_FREQ_BANDS; i++)
+	{
+		band_spl_int_sum[i] += bandSPL_int[i];
+		band_spl_frac1dp_sum[i] += bandSPL_frac_1dp[i];
+	}
 
-		spl_sum_count++;
-		if (spl_sum_count >= FILTER_SPL_N)
-		{
-			SPLcalcComplete = true;
-			SPLcalcEnabled = false;
-		}
-	#else
+	spl_sum_count++;
+	if (spl_sum_count >= FILTER_SPL_N)
+	{
 		SPLcalcComplete = true;
-	#endif
+		SPLcalcEnabled = false;
+	}
 }
 
 static void resetSPLstate(void)
 {
-	#ifdef FILTER_SPL
-		spl_int_sum = 0;
-		spl_frac1dp_sum = 0;
-		spl_sum_count = 0;
-		for (uint32_t i=0; i<SOUND_FREQ_BANDS; i++)
-		{
-			band_spl_int_sum[i] = 0;
-			band_spl_frac1dp_sum[i] = 0;
-		}
-	#endif
+	spl_int_sum = 0;
+	spl_frac1dp_sum = 0;
+	spl_sum_count = 0;
+	for (uint32_t i=0; i<SOUND_FREQ_BANDS; i++)
+	{
+		band_spl_int_sum[i] = 0;
+		band_spl_frac1dp_sum[i] = 0;
+	}
 	SPLcalcComplete = false;
 }
 

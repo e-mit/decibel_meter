@@ -89,10 +89,13 @@ void test_soundSystem(void)
 	float peak_amp_mPa_actual = 2945.97f; // assuming ik_mPa = 3.3638e-3;
 
 	memcpy((int32_t *) &dataBuffer, &x1_32, 4*FFT_N);
+	resetSPLstate();
 	calculateSPLQ31();
 	SoundData_t data;
 	spl_sum_count = 1;
 	maximumAmplitude = maximumAmplitude_in;
+	micEnabled = true;
+	SPLcalcComplete = true;
 	getSoundData(&data, true, true);
 
 	float theSPL = ((float) data.SPL_dBA_int) + (((float) data.SPL_dBA_fr_1dp)/10.0f);

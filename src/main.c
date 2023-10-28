@@ -8,8 +8,6 @@
 #include "print_functions.h"
 #include "sound_measurement.h"
 
-bool simplifiedReadout(void);
-SoundData_t soundData = {0};
 
 int main(void)
 {
@@ -40,47 +38,26 @@ int main(void)
 			errorHandler(__func__, __LINE__, __FILE__);
 		}
 
+		SoundData_t soundData = {0};
+		if (!startSPLcalculation())
+		{
+			errorHandler(__func__, __LINE__, __FILE__);
+		}
+
 		while (true)
 		{
-			if (simplifiedReadout())
+			if (getSoundData(&soundData, true, true))
 			{
-				clearMaximumAmplitude(); // Call this at any time
+				clearMaximumAmplitude();
 				print("%u.%u  %u.%02u  %u\n", soundData.SPL_dBA_int,
-						soundData.SPL_dBA_fr_1dp, soundData.peak_amp_mPa_int,
-						soundData.peak_amp_mPa_fr_2dp, soundData.stable);
+					  soundData.SPL_dBA_fr_1dp, soundData.peak_amp_mPa_int,
+					  soundData.peak_amp_mPa_fr_2dp, soundData.stable);
+				if (!startSPLcalculation())
+				{
+					errorHandler(__func__, __LINE__, __FILE__);
+				}
 			}
 		}
 	#endif
 	return 0;
 }
-
-// Return bool: new data available
-bool simplifiedReadout(void)
-{
-	static uint32_t stage = 0;
-
-	if (stage == 0)
-	{
-		enableSPLcalculation(true); // start a new acquisition/calculation
-		stage++;
-		return false;
-	}
-	else if (stage == 1)
-	{
-		if (!isSPLcalcComplete())
-		{
-			return false;
-		}
-		// Acquisition/calculation complete: get data
-		getSoundData(&soundData, true, true);
-		enableSPLcalculation(false); // reset the calculation, ready for restart
-		stage = 0;
-		return true;
-	}
-
-	errorHandler(__func__, __LINE__, __FILE__);
-	stage = 0;
-	return false;
-}
-
-
