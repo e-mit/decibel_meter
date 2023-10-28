@@ -100,22 +100,22 @@ void test_soundSystem(void)
 
 	float theSPL = ((float) data.SPL_dBA_int) + (((float) data.SPL_dBA_fr_1dp)/10.0f);
 	print("   SPL abs difference = %.2f (SPL = %.2f)\n",
-		  fabs(theSPL - SPL_expected), theSPL);
-	ok = ok && (fabs(theSPL - SPL_expected) <= SPL_TOL);
+		  fabsf(theSPL - SPL_expected), theSPL);
+	ok = ok && (fabsf(theSPL - SPL_expected) <= SPL_TOL);
 
 	for (uint32_t i = 0; i < SOUND_FREQ_BANDS; i++)
 	{
 		theSPL = ((float) bandSPL_int[i]) + (((float) bandSPL_frac_1dp[i])/10.0f);
 		print("   Band %i abs difference = %.2f\n",
-			  i, fabs(theSPL - bandSPL_expected[i]));
-		ok = ok && (fabs(theSPL - bandSPL_expected[i]) <= SPL_TOL);
+			  i, fabsf(theSPL - bandSPL_expected[i]));
+		ok = ok && (fabsf(theSPL - bandSPL_expected[i]) <= SPL_TOL);
 	}
 
 	float theAmp = ((float) data.peak_amp_mPa_int)
 			        + (((float) data.peak_amp_mPa_fr_2dp)/100.0f);
 	print("   Max. amplitude abs difference = %.2f\n",
-		  fabs(theAmp - peak_amp_mPa_actual));
-	ok = ok && (fabs(theAmp - peak_amp_mPa_actual) <= AMP_TOL);
+		  fabsf(theAmp - peak_amp_mPa_actual));
+	ok = ok && (fabsf(theAmp - peak_amp_mPa_actual) <= AMP_TOL);
 
 	TEST_RESULT(ok);
 
