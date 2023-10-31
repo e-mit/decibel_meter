@@ -28,20 +28,20 @@ void print(const char* format, ...)
 // no newlines or spaces included.
 void print64hex(int64_t n)
 {
-	uint64_t x = llabs(n);
-	uint16_t a = (uint16_t) (x >> 48);
-	uint16_t b = (uint16_t) ((x >> 32) & 0xFFFF);
-	uint16_t c = (uint16_t) ((x >> 16) & 0xFFFF);
-	uint16_t d = (uint16_t) (x & 0xFFFF);
-	if (n < 0)
-	{
-		snprintf(strbuf, sizeof strbuf, "-0x%04X'%04X'%04X'%04X", a, b, c, d);
-	}
-	else
-	{
-		snprintf(strbuf, sizeof strbuf, "0x%04X'%04X'%04X'%04X", a, b, c, d);
-	}
-	printString(strbuf, strlen(strbuf));
+    uint64_t x = llabs(n);
+    uint16_t a = (uint16_t) (x >> 48);
+    uint16_t b = (uint16_t) ((x >> 32) & 0xFFFF);
+    uint16_t c = (uint16_t) ((x >> 16) & 0xFFFF);
+    uint16_t d = (uint16_t) (x & 0xFFFF);
+    if (n < 0)
+    {
+        snprintf(strbuf, sizeof strbuf, "-0x%04X'%04X'%04X'%04X", a, b, c, d);
+    }
+    else
+    {
+        snprintf(strbuf, sizeof strbuf, "0x%04X'%04X'%04X'%04X", a, b, c, d);
+    }
+    printString(strbuf, strlen(strbuf));
 }
 
 // Print a 64-bit unsigned integer in hex.
@@ -50,11 +50,11 @@ void print64hex(int64_t n)
 // no newlines or spaces included.
 void printU64hex(uint64_t x)
 {
-	uint16_t a = (uint16_t) (x >> 48);
-	uint16_t b = (uint16_t) ((x >> 32) & 0xFFFF);
-	uint16_t c = (uint16_t) ((x >> 16) & 0xFFFF);
-	uint16_t d = (uint16_t) (x & 0xFFFF);
-	snprintf(strbuf, sizeof strbuf, "0x%04X'%04X'%04X'%04X", a, b, c, d);
-	printString(strbuf, strlen(strbuf));
+    uint16_t a = (uint16_t) (x >> 48);
+    uint16_t b = (uint16_t) ((x >> 32) & 0xFFFF);
+    uint16_t c = (uint16_t) ((x >> 16) & 0xFFFF);
+    uint16_t d = (uint16_t) (x & 0xFFFF);
+    snprintf(strbuf, sizeof strbuf, "0x%04X'%04X'%04X'%04X", a, b, c, d);
+    printString(strbuf, strlen(strbuf));
 }
 

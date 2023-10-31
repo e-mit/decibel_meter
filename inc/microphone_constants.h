@@ -12,8 +12,8 @@
 /* Conversion of microphone digital output to sound pressure.
    This depends on the microphone sensitivity (S) and the
    output data bitdepth (N).
-	  pressure/mPa = (digital amplitude)*ik_mPa;
-	  ik_mPa = sqrt(2)/((10^((S/dB)/20))*((2^(N-1))-1))
+      pressure/mPa = (digital amplitude)*ik_mPa;
+      ik_mPa = sqrt(2)/((10^((S/dB)/20))*((2^(N-1))-1))
    e.g. If S = -26 dB and N = 24, then: ik_mPa = 3.3638e-3
 */
 static const float ik_mPa = 3.3638e-3f;

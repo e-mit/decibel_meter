@@ -25,13 +25,13 @@ static const uint8_t LUT10log10[LUT_10LOG10_LENGTH] = {1, 1, 2, 2, 2, 3, 3, 3, 4
 // integer and fractional parts:
 static void accessLUT10log10(uint32_t index, uint32_t * intPart, uint32_t * fracPart)
 {
-	if (index >= LUT_10LOG10_LENGTH)
-	{
-		index = LUT_10LOG10_LENGTH - 1;
-	}
-	uint8_t x = LUT10log10[index];
-	intPart[0] = (uint32_t) (x >> fracPartLSBs);
-	fracPart[0] = ((uint32_t) x) - (intPart[0] << fracPartLSBs);
+    if (index >= LUT_10LOG10_LENGTH)
+    {
+        index = LUT_10LOG10_LENGTH - 1;
+    }
+    uint8_t x = LUT10log10[index];
+    intPart[0] = (uint32_t) (x >> fracPartLSBs);
+    fracPart[0] = ((uint32_t) x) - (intPart[0] << fracPartLSBs);
 }
 
 
@@ -40,33 +40,33 @@ static void accessLUT10log10(uint32_t index, uint32_t * intPart, uint32_t * frac
 // i.e. result = integerPart + (fractionalPart/10);
 void efficient10log10(uint64_t P, int32_t * integerPart, int32_t * fractionalPart)
 {
-	// NOTE: the CLZ (count leading zeros) instruction is not available on M0/M0+
-	// so use a simple shifting algorithm:
-	uint64_t limit = (((uint64_t) 1) << mantissa_kBits) - 1; // limit = ((2^kBits)-1)
-	// Bit-shift P downwards until the remaining mantissa is a
-	// "mantissa_kBits" length value
-	uint16_t bShift = 0;
-	while (P > limit)
-	{
-		P = P >> 1;
-		bShift++;
-	}
-	// Calculate the index to the LUT:
-	uint32_t ind = ((uint32_t) P) - (((uint32_t) 1) << (mantissa_kBits-1));
-	// Do the lookup:
-	uint32_t lutIntPart = 0;
-	uint32_t lutFracPart = 0;
-	accessLUT10log10(ind, &lutIntPart, &lutFracPart);
-	// Provide the result as an integer and fractional part
-	// (with the fractional part x10)
-	int32_t intPart = (int32_t) (intOffset10log10 + lutIntPart
-			            + (bShift * TLT2_intPart));
-	int32_t fracPart = (int32_t) (lutFracPart
-			            + ((bShift * TLT2_shiftedFracPart) >> TLT2_bitshift));
-	// Make a correction if fractional part is not in range 0->9:
-	correctIntFracNumber(&intPart, &fracPart);
-	integerPart[0] = intPart;
-	fractionalPart[0] = fracPart;
+    // NOTE: the CLZ (count leading zeros) instruction is not available on M0/M0+
+    // so use a simple shifting algorithm:
+    uint64_t limit = (((uint64_t) 1) << mantissa_kBits) - 1; // limit = ((2^kBits)-1)
+    // Bit-shift P downwards until the remaining mantissa is a
+    // "mantissa_kBits" length value
+    uint16_t bShift = 0;
+    while (P > limit)
+    {
+        P = P >> 1;
+        bShift++;
+    }
+    // Calculate the index to the LUT:
+    uint32_t ind = ((uint32_t) P) - (((uint32_t) 1) << (mantissa_kBits-1));
+    // Do the lookup:
+    uint32_t lutIntPart = 0;
+    uint32_t lutFracPart = 0;
+    accessLUT10log10(ind, &lutIntPart, &lutFracPart);
+    // Provide the result as an integer and fractional part
+    // (with the fractional part x10)
+    int32_t intPart = (int32_t) (intOffset10log10 + lutIntPart
+                        + (bShift * TLT2_intPart));
+    int32_t fracPart = (int32_t) (lutFracPart
+                        + ((bShift * TLT2_shiftedFracPart) >> TLT2_bitshift));
+    // Make a correction if fractional part is not in range 0->9:
+    correctIntFracNumber(&intPart, &fracPart);
+    integerPart[0] = intPart;
+    fractionalPart[0] = fracPart;
 }
 
 
@@ -77,26 +77,26 @@ void efficient10log10(uint64_t P, int32_t * integerPart, int32_t * fractionalPar
 // (or one/both parts zero) AND |fracPart| < 10
 void correctIntFracNumber(int32_t * intPart, int32_t * fracPart)
 {
-	while (fracPart[0] >= 10)
-	{
-		intPart[0] = intPart[0] + 1;
-		fracPart[0] = fracPart[0] - 10;
-	}
-	while (fracPart[0] <= -10)
-	{
-		intPart[0] = intPart[0] - 1;
-		fracPart[0] = fracPart[0] + 10;
-	}
-	// now correct cases where signs are not consistent:
-	if ((intPart[0] < 0) && (fracPart[0] > 0))
-	{
-		intPart[0] = intPart[0] + 1;
-		fracPart[0] = fracPart[0] - 10;
-	}
-	else if ((intPart[0] > 0) && (fracPart[0] < 0))
-	{
-		intPart[0] = intPart[0] - 1;
-		fracPart[0] = fracPart[0] + 10;
-	}
+    while (fracPart[0] >= 10)
+    {
+        intPart[0] = intPart[0] + 1;
+        fracPart[0] = fracPart[0] - 10;
+    }
+    while (fracPart[0] <= -10)
+    {
+        intPart[0] = intPart[0] - 1;
+        fracPart[0] = fracPart[0] + 10;
+    }
+    // now correct cases where signs are not consistent:
+    if ((intPart[0] < 0) && (fracPart[0] > 0))
+    {
+        intPart[0] = intPart[0] + 1;
+        fracPart[0] = fracPart[0] - 10;
+    }
+    else if ((intPart[0] > 0) && (fracPart[0] < 0))
+    {
+        intPart[0] = intPart[0] - 1;
+        fracPart[0] = fracPart[0] + 10;
+    }
 }
 

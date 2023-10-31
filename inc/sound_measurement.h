@@ -26,21 +26,21 @@
 ////////////////////////////////////////////////////////
 
 typedef struct __attribute__((packed)) {
-  uint8_t  SPL_dBA_int;
-  uint8_t  SPL_dBA_fr_1dp;
-  uint8_t  SPL_bands_dB_int[SOUND_FREQ_BANDS];
-  uint8_t  SPL_bands_dB_fr_1dp[SOUND_FREQ_BANDS];
-  uint16_t peak_amp_mPa_int;
-  uint8_t  peak_amp_mPa_fr_2dp;
-  uint8_t  stable;
+    uint8_t  SPL_dBA_int;
+    uint8_t  SPL_dBA_fr_1dp;
+    uint8_t  SPL_bands_dB_int[SOUND_FREQ_BANDS];
+    uint8_t  SPL_bands_dB_fr_1dp[SOUND_FREQ_BANDS];
+    uint16_t peak_amp_mPa_int;
+    uint8_t  peak_amp_mPa_fr_2dp;
+    uint8_t  stable;
 } SoundData_t;
 
 ////////////////////////////////////////////////////////
 // User interface functions:
 
 bool soundInit(void (*DMAInit)(DMA_HandleTypeDef **),
-		       bool (*I2SInit)(I2S_HandleTypeDef **),
-		       bool (*tmrInit)(TIM_HandleTypeDef **), IRQn_Type DMAChIRQn);
+               bool (*I2SInit)(I2S_HandleTypeDef **),
+               bool (*tmrInit)(TIM_HandleTypeDef **), IRQn_Type DMAChIRQn);
 bool enableMicrophone(bool bEnable);
 void clearMaximumAmplitude(void);
 bool startSPLcalculation(void);
